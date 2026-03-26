@@ -1,3 +1,21 @@
 spring:
   application:
     name: AIContractRiskAnalyzerBackend
+  datasource:
+    url: ${DB_URL:jdbc:h2:file:./build/devdb/contracts;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
