@@ -3,6 +3,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.ContractRepository;
@@ -11,13 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ContractService {
 
     private final ContractRepository contractRepository;
 
-    public ContractService(ContractRepository contractRepository) {
-        this.contractRepository = contractRepository;
-    }
 
     @Transactional
     public ContractEntity upload(String fileName, String sourceUri, String mimeType, String base64Content) {

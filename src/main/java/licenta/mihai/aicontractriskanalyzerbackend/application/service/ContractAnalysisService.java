@@ -3,6 +3,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.api.mapper.ApiMapper;
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.ClauseDetectionService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.MissingClauseDetectionService;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ContractAnalysisService {
 
     private final ContractService contractService;
@@ -32,29 +34,6 @@ public class ContractAnalysisService {
     private final MlInferencePort mlInferencePort;
     private final ApiMapper apiMapper;
 
-    public ContractAnalysisService(
-        ContractService contractService,
-        RuleService ruleService,
-        TextExtractionService textExtractionService,
-        ClauseDetectionService clauseDetectionService,
-        MissingClauseDetectionService missingClauseDetectionService,
-        RuleEngineService ruleEngineService,
-        RiskScoringService riskScoringService,
-        SuggestionService suggestionService,
-        MlInferencePort mlInferencePort,
-        ApiMapper apiMapper
-    ) {
-        this.contractService = contractService;
-        this.ruleService = ruleService;
-        this.textExtractionService = textExtractionService;
-        this.clauseDetectionService = clauseDetectionService;
-        this.missingClauseDetectionService = missingClauseDetectionService;
-        this.ruleEngineService = ruleEngineService;
-        this.riskScoringService = riskScoringService;
-        this.suggestionService = suggestionService;
-        this.mlInferencePort = mlInferencePort;
-        this.apiMapper = apiMapper;
-    }
 
     @Transactional
     public ContractEntity analyze(String contractId, List<String> selectedRuleIds) {

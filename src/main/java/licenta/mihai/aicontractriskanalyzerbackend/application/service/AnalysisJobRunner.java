@@ -1,6 +1,7 @@
 package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 
 import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisJobStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.AnalysisJobEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.AnalysisJobRepository;
@@ -9,15 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class AnalysisJobRunner {
 
     private final AnalysisJobRepository analysisJobRepository;
     private final ContractAnalysisService contractAnalysisService;
 
-    public AnalysisJobRunner(AnalysisJobRepository analysisJobRepository, ContractAnalysisService contractAnalysisService) {
-        this.analysisJobRepository = analysisJobRepository;
-        this.contractAnalysisService = contractAnalysisService;
-    }
 
     @Async("analysisTaskExecutor")
     @Transactional

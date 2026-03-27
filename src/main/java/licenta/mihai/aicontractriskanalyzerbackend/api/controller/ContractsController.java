@@ -2,6 +2,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.api.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalysisJobDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalyzeContractRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractRecordDto;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/v1/contracts")
+@RequiredArgsConstructor
 public class ContractsController {
 
     private final ContractService contractService;
@@ -33,19 +35,6 @@ public class ContractsController {
     private final TextExtractionService textExtractionService;
     private final ApiMapper apiMapper;
 
-    public ContractsController(
-        ContractService contractService,
-        AnalysisJobService analysisJobService,
-        ContractAnalysisService contractAnalysisService,
-        TextExtractionService textExtractionService,
-        ApiMapper apiMapper
-    ) {
-        this.contractService = contractService;
-        this.analysisJobService = analysisJobService;
-        this.contractAnalysisService = contractAnalysisService;
-        this.textExtractionService = textExtractionService;
-        this.apiMapper = apiMapper;
-    }
 
     @PostMapping("/extract-text")
     public ExtractTextResponseDto extractText(@Valid @RequestBody ExtractTextRequestDto request) {

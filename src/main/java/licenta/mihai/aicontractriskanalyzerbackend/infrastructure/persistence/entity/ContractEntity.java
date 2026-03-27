@@ -10,12 +10,18 @@ import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.ContractAnalysisResultConverter;
 
 @Entity
 @Table(name = "contracts")
+@Getter
+@Setter
+@NoArgsConstructor
 public class ContractEntity {
 
     @Id
@@ -57,70 +63,6 @@ public class ContractEntity {
         entity.uploadedAt = Instant.now();
         entity.status = AnalysisStatus.PENDING;
         return entity;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public String getSourceUri() {
-        return sourceUri;
-    }
-
-    public void setSourceUri(String sourceUri) {
-        this.sourceUri = sourceUri;
-    }
-
-    public String getMimeType() {
-        return mimeType;
-    }
-
-    public void setMimeType(String mimeType) {
-        this.mimeType = mimeType;
-    }
-
-    public String getBase64Content() {
-        return base64Content;
-    }
-
-    public void setBase64Content(String base64Content) {
-        this.base64Content = base64Content;
-    }
-
-    public Instant getUploadedAt() {
-        return uploadedAt;
-    }
-
-    public void setUploadedAt(Instant uploadedAt) {
-        this.uploadedAt = uploadedAt;
-    }
-
-    public AnalysisStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(AnalysisStatus status) {
-        this.status = status;
-    }
-
-    public ContractAnalysisResult getAnalysis() {
-        return analysis;
-    }
-
-    public void setAnalysis(ContractAnalysisResult analysis) {
-        this.analysis = analysis;
     }
 }
 

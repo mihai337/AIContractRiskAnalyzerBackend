@@ -1,6 +1,7 @@
 package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.CustomRuleRepository;
 import licenta.mihai.aicontractriskanalyzerbackend.shared.exception.NotFoundException;
@@ -8,13 +9,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class RuleService {
 
     private final CustomRuleRepository customRuleRepository;
 
-    public RuleService(CustomRuleRepository customRuleRepository) {
-        this.customRuleRepository = customRuleRepository;
-    }
 
     @Transactional(readOnly = true)
     public List<CustomRuleEntity> listRules() {

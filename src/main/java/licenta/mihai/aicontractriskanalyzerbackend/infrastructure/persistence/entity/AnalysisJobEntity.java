@@ -10,11 +10,17 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisJobStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.StringListJsonConverter;
 
 @Entity
 @Table(name = "analysis_jobs")
+@Getter
+@Setter
+@NoArgsConstructor
 public class AnalysisJobEntity {
 
     @Id
@@ -49,54 +55,6 @@ public class AnalysisJobEntity {
         entity.status = AnalysisJobStatus.PENDING;
         entity.createdAt = Instant.now();
         return entity;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getContractId() {
-        return contractId;
-    }
-
-    public AnalysisJobStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(AnalysisJobStatus status) {
-        this.status = status;
-    }
-
-    public List<String> getSelectedRuleIds() {
-        return selectedRuleIds;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getStartedAt() {
-        return startedAt;
-    }
-
-    public void setStartedAt(Instant startedAt) {
-        this.startedAt = startedAt;
-    }
-
-    public Instant getCompletedAt() {
-        return completedAt;
-    }
-
-    public void setCompletedAt(Instant completedAt) {
-        this.completedAt = completedAt;
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public void setErrorMessage(String errorMessage) {
-        this.errorMessage = errorMessage;
     }
 }
 

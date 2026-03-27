@@ -2,6 +2,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.api.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.CustomRuleDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.OkResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RuleEnabledRequestDto;
@@ -16,15 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/v1/rules")
+@RequiredArgsConstructor
 public class RulesController {
 
     private final RuleService ruleService;
     private final ApiMapper apiMapper;
 
-    public RulesController(RuleService ruleService, ApiMapper apiMapper) {
-        this.ruleService = ruleService;
-        this.apiMapper = apiMapper;
-    }
 
     @GetMapping
     public List<CustomRuleDto> listRules() {
