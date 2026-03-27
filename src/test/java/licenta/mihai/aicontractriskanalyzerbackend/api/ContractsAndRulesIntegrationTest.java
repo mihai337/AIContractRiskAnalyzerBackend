@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
 @SpringBootTest
@@ -25,10 +27,14 @@ class ContractsAndRulesIntegrationTest {
     private WebApplicationContext webApplicationContext;
 
     private MockMvc mockMvc;
+    private String bearerToken;
 
     @BeforeEach
-    void setUp() {
-        this.mockMvc = webAppContextSetup(webApplicationContext).build();
+    void setUp() throws Exception {
+        this.mockMvc = webAppContextSetup(webApplicationContext)
+            .apply(springSecurity())
+            .build();
+        this.bearerToken = "Bearer " + TestJwtTokenFactory.validToken();
     }
 
     @Test
@@ -46,6 +52,7 @@ class ContractsAndRulesIntegrationTest {
             """.formatted(base64);
 
         MvcResult uploadResult = mockMvc.perform(post("/v1/contracts/upload")
+                .header("Authorization", bearerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(uploadBody))
             .andExpect(status().isOk())
@@ -62,6 +69,7 @@ class ContractsAndRulesIntegrationTest {
             """;
 
         mockMvc.perform(post("/v1/contracts/{contractId}/analyze", contractId)
+                .header("Authorization", bearerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(analyzeBody))
             .andExpect(status().isOk())
@@ -72,7 +80,8 @@ class ContractsAndRulesIntegrationTest {
 
     @Test
     void rulesEndpointsReturnSeededRulesAndAllowToggle() throws Exception {
-        MvcResult listResult = mockMvc.perform(get("/v1/rules"))
+        MvcResult listResult = mockMvc.perform(get("/v1/rules")
+                .header("Authorization", bearerToken))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").isNotEmpty())
             .andReturn();
@@ -86,10 +95,69 @@ class ContractsAndRulesIntegrationTest {
             """;
 
         mockMvc.perform(post("/v1/rules/{ruleId}/enabled", firstRuleId)
+                .header("Authorization", bearerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(toggleBody))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.ok").value(true));
+    }
+
+    @Test
+    void createAndPollAnalysisJobWorks() throws Exception {
+        String sampleText = "This agreement has payment and confidentiality terms.";
+        String base64 = Base64.getEncoder().encodeToString(sampleText.getBytes(StandardCharsets.UTF_8));
+        String uploadBody = """
+            {
+              "fileName": "async.txt",
+              "sourceUri": "content://local/async.txt",
+              "mimeType": "application/pdf",
+              "base64Content": "%s"
+            }
+            """.formatted(base64);
+
+        MvcResult uploadResult = mockMvc.perform(post("/v1/contracts/upload")
+                .header("Authorization", bearerToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(uploadBody))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String contractId = JsonTestHelper.readString(uploadResult.getResponse().getContentAsString(), "id");
+        String analyzeBody = """
+            {
+              "selectedRuleIds": []
+            }
+            """;
+
+        MvcResult createJobResult = mockMvc.perform(post("/v1/contracts/{contractId}/analysis-jobs", contractId)
+                .header("Authorization", bearerToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(analyzeBody))
+            .andExpect(status().isAccepted())
+            .andReturn();
+
+        String jobId = JsonTestHelper.readString(createJobResult.getResponse().getContentAsString(), "id");
+
+        String statusValue = "PENDING";
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!("COMPLETED".equals(statusValue) || "FAILED".equals(statusValue)) && System.nanoTime() < deadline) {
+            MvcResult pollResult = mockMvc.perform(get("/v1/contracts/{contractId}/analysis-jobs/{jobId}", contractId, jobId)
+                    .header("Authorization", bearerToken))
+                .andExpect(status().isOk())
+                .andReturn();
+            statusValue = JsonTestHelper.readString(pollResult.getResponse().getContentAsString(), "status");
+            Thread.sleep(100);
+        }
+
+        if (!("COMPLETED".equals(statusValue) || "FAILED".equals(statusValue))) {
+            throw new AssertionError("Async analysis job did not complete in time");
+        }
+    }
+
+    @Test
+    void protectedEndpointsRejectMissingToken() throws Exception {
+        mockMvc.perform(get("/v1/contracts"))
+            .andExpect(status().is4xxClientError());
     }
 }
 

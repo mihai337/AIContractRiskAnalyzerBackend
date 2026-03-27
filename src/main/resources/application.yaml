@@ -2,20 +2,27 @@ spring:
   application:
     name: AIContractRiskAnalyzerBackend
   datasource:
-    url: ${DB_URL:jdbc:h2:file:./build/devdb/contracts;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:mydatabase}
+    username: ${DB_USERNAME:myuser}
+    password: ${DB_PASSWORD:secret}
   jpa:
     hibernate:
       ddl-auto: update
-    open-in-view: false
-    properties:
-      hibernate:
-        format_sql: true
-
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+app:
+  security:
+    jwt:
+      issuer: ${JWT_ISSUER:https://securetoken.google.com/local-dev}
+      audience: ${JWT_AUDIENCE:local-dev}
+      hmac-secret: ${JWT_HMAC_SECRET:change-me-dev-secret-change-me-dev-secret}
+  analysis:
+    async:
+      core-pool-size: ${ANALYSIS_ASYNC_CORE_POOL_SIZE:2}
+      max-pool-size: ${ANALYSIS_ASYNC_MAX_POOL_SIZE:4}
+      queue-capacity: ${ANALYSIS_ASYNC_QUEUE_CAPACITY:100}
+

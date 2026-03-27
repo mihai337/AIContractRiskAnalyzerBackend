@@ -2,6 +2,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.api.mapper;
 
 import java.util.List;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AiSuggestionDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalysisJobDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseAnalysisDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractAnalysisDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractRecordDto;
@@ -15,6 +16,7 @@ import licenta.mihai.aicontractriskanalyzerbackend.domain.model.CustomRule;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ExtractedText;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
+import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.AnalysisJobEntity;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -127,6 +129,18 @@ public class ApiMapper {
                 .map(r -> new ContractAnalysisResult.RuleAlert(r.ruleId(), r.title(), r.description(), r.severity()))
                 .toList(),
             java.time.Instant.ofEpochSecond(dto.generatedAtEpochSeconds())
+        );
+    }
+
+    public AnalysisJobDto toAnalysisJobDto(AnalysisJobEntity entity) {
+        return new AnalysisJobDto(
+            entity.getId(),
+            entity.getContractId(),
+            entity.getStatus(),
+            entity.getCreatedAt().getEpochSecond(),
+            entity.getStartedAt() == null ? null : entity.getStartedAt().getEpochSecond(),
+            entity.getCompletedAt() == null ? null : entity.getCompletedAt().getEpochSecond(),
+            entity.getErrorMessage()
         );
     }
 }

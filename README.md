@@ -29,6 +29,8 @@ Base path: `/v1`
 - `GET /v1/contracts/{contractId}`
 - `POST /v1/contracts/{contractId}` (upsert for client cache sync)
 - `POST /v1/contracts/{contractId}/analyze`
+- `POST /v1/contracts/{contractId}/analysis-jobs` (async analyze, returns `202`)
+- `GET /v1/contracts/{contractId}/analysis-jobs/{jobId}` (poll async job status)
 
 ### Rules
 - `GET /v1/rules`
@@ -66,5 +68,8 @@ cd /Users/mihai/Desktop/labs/AIContractRiskAnalyzerBackend
 - Text extraction currently decodes `base64Content` as UTF-8 placeholder text.
 - Rule engine is deterministic and explainable; each alert includes a reason.
 - Default startup seeds 3 example custom rules if no rules exist.
-- Security is currently permissive for `/v1/**` to match mobile integration during development; replace with JWT/Firebase verification before production rollout.
+- `/v1/**` endpoints require `Authorization: Bearer <jwt>`.
+- JWT validation checks signature (HS256 in this stage), issuer, audience, and expiration.
+- Configure JWT via env vars: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_HMAC_SECRET`.
+- Async analysis executor can be tuned via: `ANALYSIS_ASYNC_CORE_POOL_SIZE`, `ANALYSIS_ASYNC_MAX_POOL_SIZE`, `ANALYSIS_ASYNC_QUEUE_CAPACITY`.
 
