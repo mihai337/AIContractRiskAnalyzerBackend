@@ -34,7 +34,7 @@ public class AnalysisJobEntity {
     private AnalysisJobStatus status;
 
     @Convert(converter = StringListJsonConverter.class)
-    @Column(nullable = false, columnDefinition = "CLOB")
+    @Column(nullable = false, columnDefinition = "text")
     private List<String> selectedRuleIds;
 
     @Column(nullable = false)

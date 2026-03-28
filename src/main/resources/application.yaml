@@ -1,13 +1,32 @@
 spring:
   application:
     name: AIContractRiskAnalyzerBackend
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:mydatabase}
     username: ${DB_USERNAME:myuser}
     password: ${DB_PASSWORD:secret}
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER:https://securetoken.google.com/aicontractriskanalyser}
+          audiences: ${JWT_AUDIENCE:aicontractriskanalyser}
+
+  cloud:
+    gcp:
+      credentials:
+        location: classpath:aicontractriskanalyser-firebase-adminsdk-fbsvc-3402fe4af4.json
+
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -15,11 +34,6 @@ springdoc:
     path: /swagger-ui.html
 
 app:
-  security:
-    jwt:
-      issuer: ${JWT_ISSUER:https://securetoken.google.com/local-dev}
-      audience: ${JWT_AUDIENCE:local-dev}
-      hmac-secret: ${JWT_HMAC_SECRET:change-me-dev-secret-change-me-dev-secret}
   analysis:
     async:
       core-pool-size: ${ANALYSIS_ASYNC_CORE_POOL_SIZE:2}

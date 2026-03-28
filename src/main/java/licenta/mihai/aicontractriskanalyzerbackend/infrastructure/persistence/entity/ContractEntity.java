@@ -50,7 +50,7 @@ public class ContractEntity {
 
     @Lob
     @Convert(converter = ContractAnalysisResultConverter.class)
-    @Column(name = "analysis_json", columnDefinition = "CLOB")
+    @Column(name = "analysis_json", columnDefinition = "text")
     private ContractAnalysisResult analysis;
 
     public static ContractEntity pending(String fileName, String sourceUri, String mimeType, String base64Content) {

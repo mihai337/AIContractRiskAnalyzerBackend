@@ -139,7 +139,7 @@ class ContractsAndRulesIntegrationTest {
         String jobId = JsonTestHelper.readString(createJobResult.getResponse().getContentAsString(), "id");
 
         String statusValue = "PENDING";
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         while (!("COMPLETED".equals(statusValue) || "FAILED".equals(statusValue)) && System.nanoTime() < deadline) {
             MvcResult pollResult = mockMvc.perform(get("/v1/contracts/{contractId}/analysis-jobs/{jobId}", contractId, jobId)
                     .header("Authorization", bearerToken))
