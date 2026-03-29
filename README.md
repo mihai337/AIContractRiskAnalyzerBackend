@@ -3,13 +3,14 @@
 Production-oriented Spring Boot backend implementing the mobile API contract for:
 - contract upload and retrieval
 - deterministic contract analysis pipeline
+- FastAPI ML inference integration (typed internal contract)
 - clause detection and classification
 - missing clause detection
 - risk scoring
 - AI suggestions (rule-based placeholder)
 - custom rule engine (keyword + required-clause checks)
 
-> ML model inference is intentionally **not implemented** yet. A dedicated extension point exists via `MlInferencePort`.
+> ML inference is integrated via `MlInferencePort` and can be toggled with `ML_ENABLED`.
 
 ## Tech Stack
 
@@ -46,7 +47,7 @@ Swagger UI: `/swagger-ui.html`
 - `api` - controllers, DTOs, error handling, mappers
 - `application` - orchestration services and analysis engine components
 - `domain` - enums and core analysis result model
-- `infrastructure` - persistence, security, seed data, ML adapter placeholder
+- `infrastructure` - persistence, security, seed data, ML adapters and client properties
 - `shared` - reusable exceptions
 
 ## Run
@@ -72,4 +73,13 @@ cd /Users/mihai/Desktop/labs/AIContractRiskAnalyzerBackend
 - JWT validation checks signature (HS256 in this stage), issuer, audience, and expiration.
 - Configure JWT via env vars: `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_HMAC_SECRET`.
 - Async analysis executor can be tuned via: `ANALYSIS_ASYNC_CORE_POOL_SIZE`, `ANALYSIS_ASYNC_MAX_POOL_SIZE`, `ANALYSIS_ASYNC_QUEUE_CAPACITY`.
+- ML integration config:
+  - `ML_ENABLED`
+  - `ML_BASE_URL`
+  - `ML_ANALYZE_PATH`
+  - `ML_API_KEY`
+  - `ML_FAIL_OPEN`
+  - `ML_CONNECT_TIMEOUT_MS`
+  - `ML_READ_TIMEOUT_MS`
+- ML raw payload and metadata are persisted in `contracts` table (`ml_analysis_raw`, `ml_engine`, `ml_analysis_success`, `ml_analyzed_at`).
 

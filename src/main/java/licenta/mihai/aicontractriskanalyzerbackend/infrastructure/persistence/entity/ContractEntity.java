@@ -53,6 +53,19 @@ public class ContractEntity {
     @Column(name = "analysis_json", columnDefinition = "text")
     private ContractAnalysisResult analysis;
 
+    @Lob
+    @Column(name = "ml_analysis_raw", columnDefinition = "text")
+    private String mlAnalysisRaw;
+
+    @Column(name = "ml_engine")
+    private String mlEngine;
+
+    @Column(name = "ml_analysis_success")
+    private Boolean mlAnalysisSuccess;
+
+    @Column(name = "ml_analyzed_at")
+    private Instant mlAnalyzedAt;
+
     public static ContractEntity pending(String fileName, String sourceUri, String mimeType, String base64Content) {
         ContractEntity entity = new ContractEntity();
         entity.id = UUID.randomUUID().toString();

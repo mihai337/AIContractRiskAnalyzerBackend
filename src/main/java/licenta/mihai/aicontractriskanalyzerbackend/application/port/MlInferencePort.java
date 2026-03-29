@@ -5,6 +5,19 @@ import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysis
 
 public interface MlInferencePort {
 
-    List<ContractAnalysisResult.DetectedClause> refineDetectedClauses(String extractedText);
+    MlInferenceResult analyzeContract(String contractId, String extractedText);
+
+    record MlInferenceResult(
+        List<ContractAnalysisResult.DetectedClause> detectedClauses,
+        List<ContractAnalysisResult.AiSuggestion> aiSuggestions,
+        List<String> riskRationale,
+        String rawPayload,
+        String engine,
+        boolean success
+    ) {
+        public static MlInferenceResult empty() {
+            return new MlInferenceResult(List.of(), List.of(), List.of(), null, "none", false);
+        }
+    }
 }
 

@@ -34,6 +34,14 @@ springdoc:
     path: /swagger-ui.html
 
 app:
+  ml:
+    enabled: ${ML_ENABLED:false}
+    base-url: ${ML_BASE_URL:http://localhost:8000}
+    analyze-text-path: ${ML_ANALYZE_PATH:/v1/ml/analyze-text}
+    api-key: ${ML_API_KEY:}
+    fail-open: ${ML_FAIL_OPEN:true}
+    connect-timeout-ms: ${ML_CONNECT_TIMEOUT_MS:2000}
+    read-timeout-ms: ${ML_READ_TIMEOUT_MS:120000}
   analysis:
     async:
       core-pool-size: ${ANALYSIS_ASYNC_CORE_POOL_SIZE:2}
