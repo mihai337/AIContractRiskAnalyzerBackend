@@ -7,6 +7,8 @@ import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.re
 import licenta.mihai.aicontractriskanalyzerbackend.shared.exception.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @RequiredArgsConstructor
@@ -18,17 +20,26 @@ public class AnalysisJobService {
 
 
     @Transactional
-    public AnalysisJobEntity createJob(String contractId, List<String> selectedRuleIds) {
-        contractService.getOrThrow(contractId);
+    public AnalysisJobEntity createJob(String contractId, List<String> selectedRuleIds, String ownerId) {
+        contractService.getOrThrow(contractId, ownerId);
         AnalysisJobEntity job = analysisJobRepository.save(AnalysisJobEntity.pending(contractId, selectedRuleIds));
-        analysisJobRunner.runAsync(job.getId());
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    analysisJobRunner.runAsync(job.getId());
+                }
+            });
+        } else {
+            analysisJobRunner.runAsync(job.getId());
+        }
         return job;
     }
 
     @Transactional(readOnly = true)
-    public AnalysisJobEntity getJobOrThrow(String contractId, String jobId) {
+    public AnalysisJobEntity getJobOrThrow(String contractId, String jobId, String ownerId) {
+        contractService.getOrThrow(contractId, ownerId);
         return analysisJobRepository.findByIdAndContractId(jobId, contractId)
             .orElseThrow(() -> new NotFoundException("Analysis job not found: " + jobId));
     }
 }
-

@@ -9,7 +9,11 @@ public record ContractAnalysisResult(
     RiskScore riskScore,
     List<AiSuggestion> aiSuggestions,
     List<RuleAlert> ruleAlerts,
-    Instant generatedAt
+    Instant generatedAt,
+    String contractType,
+    Double contractTypeConfidence,
+    Boolean isContract,
+    String nonContractReason
 ) {
     public record DetectedClause(
         String id,
@@ -51,4 +55,3 @@ public record ContractAnalysisResult(
     ) {
     }
 }
-

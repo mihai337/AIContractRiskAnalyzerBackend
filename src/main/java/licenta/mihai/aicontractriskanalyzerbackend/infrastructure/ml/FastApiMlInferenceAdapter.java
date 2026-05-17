@@ -2,11 +2,11 @@ package licenta.mihai.aicontractriskanalyzerbackend.infrastructure.ml;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
@@ -30,13 +30,47 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
 
     @Override
-    public MlInferenceResult analyzeContract(String contractId, String extractedText) {
+    public MlExtractedTextResult extractText(String contractId, String fileName, String mimeType, String base64Content) {
+        try {
+            RestClient restClient = buildClient();
+            MlExtractResponse response = restClient.post()
+                .uri(properties.getExtractTextPath())
+                .headers(headers -> applyHeaders(headers, contractId))
+                .body(new MlAnalyzeRequest(contractId, fileName, mimeType, base64Content))
+                .retrieve()
+                .body(MlExtractResponse.class);
+
+            if (response == null) {
+                return MlExtractedTextResult.empty();
+            }
+
+            String text = response.getText() == null ? "" : response.getText();
+            String engine = response.getExtractionEngine() == null ? "fastapi" : response.getExtractionEngine();
+            return new MlExtractedTextResult(
+                text,
+                engine,
+                Boolean.TRUE.equals(response.getContainsScannedPages()),
+                true
+            );
+        } catch (Exception ex) {
+            log.warn("ML extraction call failed for contract {}: {}", contractId, ex.getMessage());
+            return MlExtractedTextResult.empty();
+        }
+    }
+
+    @Override
+    public MlInferenceResult analyzeContract(
+        String contractId,
+        String fileName,
+        String mimeType,
+        String base64Content
+    ) {
         try {
             RestClient restClient = buildClient();
             MlAnalyzeResponse response = restClient.post()
-                .uri(URI.create(properties.getAnalyzeTextPath()))
+                .uri(properties.getAnalyzeTextPath())
                 .headers(headers -> applyHeaders(headers, contractId))
-                .body(new MlAnalyzeRequest(contractId, extractedText))
+                .body(new MlAnalyzeRequest(contractId, fileName, mimeType, base64Content))
                 .retrieve()
                 .body(MlAnalyzeResponse.class);
 
@@ -45,12 +79,17 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
             }
 
             return new MlInferenceResult(
-                toDetectedClauses(response.detectedClauses),
-                toSuggestions(response.aiSuggestions),
-                response.riskRationale == null ? List.of() : response.riskRationale,
+                toDetectedClauses(response.getDetectedClauses()),
+                toSuggestions(response.getAiSuggestions()),
+                response.getRiskRationale() == null ? List.of() : response.getRiskRationale(),
+                response.getExtractedText() == null ? "" : response.getExtractedText(),
                 toRawPayload(response),
-                response.modelMetadata == null ? "fastapi" : response.modelMetadata.engine,
-                true
+                response.getModelMetadata() == null ? "fastapi" : response.getModelMetadata().getEngine(),
+                true,
+                response.getContractType() == null ? "UNKNOWN" : response.getContractType(),
+                response.getContractTypeConfidence() == null ? 0.0 : response.getContractTypeConfidence(),
+                response.getIsContract() == null ? Boolean.TRUE : response.getIsContract(),
+                response.getNonContractReason()
             );
         } catch (Exception ex) {
             log.warn("ML analysis call failed for contract {}: {}", contractId, ex.getMessage());
@@ -80,7 +119,7 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         if (!properties.isFailOpen()) {
             throw new IllegalStateException("ML analysis failed: " + reason);
         }
-        return new MlInferenceResult(List.of(), List.of(), List.of("ML unavailable: " + reason), null, "fastapi", false);
+        return new MlInferenceResult(List.of(), List.of(), List.of("ML unavailable: " + reason), "", null, "fastapi", false, "UNKNOWN", 0.0, Boolean.TRUE, null);
     }
 
     private String toRawPayload(MlAnalyzeResponse response) {
@@ -99,11 +138,11 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         for (MlClause mlClause : source) {
             output.add(new ContractAnalysisResult.DetectedClause(
                 UUID.randomUUID().toString(),
-                toClauseType(mlClause.type),
-                mlClause.title == null ? "ML detected clause" : mlClause.title,
-                mlClause.snippet == null ? "" : mlClause.snippet,
-                normalizeConfidence(mlClause.confidence),
-                toRiskLevel(mlClause.riskLevel)
+                toClauseType(mlClause.getType()),
+                mlClause.getTitle() == null ? "ML detected clause" : mlClause.getTitle(),
+                mlClause.getSnippet() == null ? "" : mlClause.getSnippet(),
+                normalizeConfidence(mlClause.getConfidence()),
+                toRiskLevel(mlClause.getRiskLevel())
             ));
         }
         return output;
@@ -117,9 +156,9 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         for (MlSuggestion suggestion : source) {
             output.add(new ContractAnalysisResult.AiSuggestion(
                 UUID.randomUUID().toString(),
-                suggestion.title == null ? "ML suggestion" : suggestion.title,
-                suggestion.description == null ? "" : suggestion.description,
-                toRiskLevel(suggestion.priority)
+                suggestion.getTitle() == null ? "ML suggestion" : suggestion.getTitle(),
+                suggestion.getDescription() == null ? "" : suggestion.getDescription(),
+                toRiskLevel(suggestion.getPriority())
             ));
         }
         return output;
@@ -157,37 +196,60 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         }
     }
 
-    private record MlAnalyzeRequest(String contractId, String text) {
+    private record MlAnalyzeRequest(
+        String contractId,
+        String fileName,
+        String mimeType,
+        String base64Content
+    ) {
     }
 
+    @Data
     private static class MlAnalyzeResponse {
-        public List<MlClause> detectedClauses;
-        public List<MlSuggestion> aiSuggestions;
-        public List<String> riskRationale;
-        public String keyClauses;
-        public String riskAssessmentReport;
-        public String recommendedActions;
-        public MlModelMetadata modelMetadata;
+        private List<MlClause> detectedClauses;
+        private List<MlSuggestion> aiSuggestions;
+        private List<String> riskRationale;
+        private String extractedText;
+        private Boolean containsScannedPages;
+        private String extractionEngine;
+        private String keyClauses;
+        private String riskAssessmentReport;
+        private String recommendedActions;
+        private MlModelMetadata modelMetadata;
+        private String contractType;
+        private Double contractTypeConfidence;
+        private Boolean isContract;
+        private String nonContractReason;
     }
 
+    @Data
     private static class MlClause {
-        public String type;
-        public String title;
-        public String snippet;
-        public Double confidence;
-        public String riskLevel;
+        private String type;
+        private String title;
+        private String snippet;
+        private Double confidence;
+        private String riskLevel;
     }
 
+    @Data
     private static class MlSuggestion {
-        public String title;
-        public String description;
-        public String priority;
+        private String title;
+        private String description;
+        private String priority;
     }
 
+    @Data
     private static class MlModelMetadata {
-        public String engine;
-        public String modelVersion;
-        public Long latencyMs;
+        private String engine;
+        private String modelVersion;
+        private Long latencyMs;
+    }
+
+    @Data
+    private static class MlExtractResponse {
+        private String text;
+        private String extractionEngine;
+        private Boolean containsScannedPages;
     }
 }
 

@@ -1,5 +1,6 @@
 package licenta.mihai.aicontractriskanalyzerbackend.api.mapper;
 
+import java.util.Collections;
 import java.util.List;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AiSuggestionDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalysisJobDto;
@@ -29,7 +30,8 @@ public class ApiMapper {
             entity.getSourceUri(),
             entity.getUploadedAt().getEpochSecond(),
             entity.getStatus(),
-            toContractAnalysisDto(entity.getAnalysis())
+            toContractAnalysisDto(entity.getAnalysis()),
+            safeList(entity.getSelectedRuleIds())
         );
     }
 
@@ -37,15 +39,22 @@ public class ApiMapper {
         if (result == null) {
             return null;
         }
+        ContractAnalysisResult.RiskScore riskScore = result.riskScore() == null
+            ? defaultRiskScore()
+            : result.riskScore();
         return new ContractAnalysisDto(
-            result.detectedClauses().stream()
+            safeList(result.detectedClauses()).stream()
                 .map(c -> new ClauseAnalysisDto(c.id(), c.type(), c.title(), c.snippet(), c.confidence(), c.riskLevel()))
                 .toList(),
-            result.missingClauses().stream().map(m -> new MissingClauseDto(m.type(), m.reason(), m.severity())).toList(),
-            new RiskScoreDto(result.riskScore().overallScore(), result.riskScore().riskLevel(), result.riskScore().rationale()),
-            result.aiSuggestions().stream().map(s -> new AiSuggestionDto(s.id(), s.title(), s.description(), s.priority())).toList(),
-            result.ruleAlerts().stream().map(r -> new RuleAlertDto(r.ruleId(), r.title(), r.description(), r.severity())).toList(),
-            result.generatedAt().getEpochSecond()
+            safeList(result.missingClauses()).stream().map(m -> new MissingClauseDto(m.type(), m.reason(), m.severity())).toList(),
+            new RiskScoreDto(riskScore.overallScore(), riskScore.riskLevel(), safeList(riskScore.rationale())),
+            safeList(result.aiSuggestions()).stream().map(s -> new AiSuggestionDto(s.id(), s.title(), s.description(), s.priority())).toList(),
+            safeList(result.ruleAlerts()).stream().map(r -> new RuleAlertDto(r.ruleId(), r.title(), r.description(), r.severity())).toList(),
+            result.generatedAt() == null ? java.time.Instant.now().getEpochSecond() : result.generatedAt().getEpochSecond(),
+            result.contractType(),
+            result.contractTypeConfidence(),
+            result.isContract(),
+            result.nonContractReason()
         );
     }
 
@@ -103,6 +112,7 @@ public class ApiMapper {
         entity.setUploadedAt(java.time.Instant.ofEpochSecond(dto.uploadedAtEpochSeconds()));
         entity.setStatus(dto.status());
         entity.setAnalysis(toContractAnalysis(dto.analysis()));
+        entity.setSelectedRuleIds(safeList(dto.selectedRuleIds()));
         return entity;
     }
 
@@ -110,26 +120,45 @@ public class ApiMapper {
         if (dto == null) {
             return null;
         }
+        RiskScoreDto riskScore = dto.riskScore() == null
+            ? new RiskScoreDto(0, licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel.CRITICAL, List.of("Risk score unavailable"))
+            : dto.riskScore();
         return new ContractAnalysisResult(
-            dto.detectedClauses().stream()
+            safeList(dto.detectedClauses()).stream()
                 .map(c -> new ContractAnalysisResult.DetectedClause(c.id(), c.type(), c.title(), c.snippet(), c.confidence(), c.riskLevel()))
                 .toList(),
-            dto.missingClauses().stream()
+            safeList(dto.missingClauses()).stream()
                 .map(m -> new ContractAnalysisResult.MissingClause(m.type(), m.reason(), m.severity()))
                 .toList(),
             new ContractAnalysisResult.RiskScore(
-                dto.riskScore().overallScore(),
-                dto.riskScore().riskLevel(),
-                dto.riskScore().rationale()
+                riskScore.overallScore(),
+                riskScore.riskLevel(),
+                safeList(riskScore.rationale())
             ),
-            dto.aiSuggestions().stream()
+            safeList(dto.aiSuggestions()).stream()
                 .map(s -> new ContractAnalysisResult.AiSuggestion(s.id(), s.title(), s.description(), s.priority()))
                 .toList(),
-            dto.ruleAlerts().stream()
+            safeList(dto.ruleAlerts()).stream()
                 .map(r -> new ContractAnalysisResult.RuleAlert(r.ruleId(), r.title(), r.description(), r.severity()))
                 .toList(),
-            java.time.Instant.ofEpochSecond(dto.generatedAtEpochSeconds())
+            java.time.Instant.ofEpochSecond(dto.generatedAtEpochSeconds()),
+            dto.contractType(),
+            dto.contractTypeConfidence(),
+            dto.isContract(),
+            dto.nonContractReason()
         );
+    }
+
+    private ContractAnalysisResult.RiskScore defaultRiskScore() {
+        return new ContractAnalysisResult.RiskScore(
+            0,
+            licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel.CRITICAL,
+            List.of("Risk score unavailable")
+        );
+    }
+
+    private <T> List<T> safeList(List<T> input) {
+        return input == null ? Collections.emptyList() : input;
     }
 
     public AnalysisJobDto toAnalysisJobDto(AnalysisJobEntity entity) {
@@ -144,5 +173,3 @@ public class ApiMapper {
         );
     }
 }
-
-

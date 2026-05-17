@@ -9,9 +9,18 @@ import org.springframework.stereotype.Component;
 public class NoopMlInferenceAdapter implements MlInferencePort {
 
     @Override
-    public MlInferenceResult analyzeContract(String contractId, String extractedText) {
+    public MlExtractedTextResult extractText(String contractId, String fileName, String mimeType, String base64Content) {
+        return MlExtractedTextResult.empty();
+    }
+
+    @Override
+    public MlInferenceResult analyzeContract(
+        String contractId,
+        String fileName,
+        String mimeType,
+        String base64Content
+    ) {
         // Deterministic fallback for environments where ML is disabled.
         return MlInferenceResult.empty();
     }
 }
-

@@ -7,3 +7,15 @@ services:
       - 'POSTGRES_USER=myuser'
     ports:
       - '5432:5432'
+
+  ml-service:
+    build:
+      context: ../ML
+      dockerfile: Dockerfile
+    environment:
+      - "ML_API_KEY=${ML_API_KEY:-}"
+      - "ML_ZERO_SHOT_ENABLED=${ML_ZERO_SHOT_ENABLED:-true}"
+      - "ML_OCR_ENABLED=${ML_OCR_ENABLED:-true}"
+    ports:
+      - '8000:8000'
+

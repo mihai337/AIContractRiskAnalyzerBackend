@@ -3,6 +3,11 @@ package licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.r
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ContractRepository extends JpaRepository<ContractEntity, String> {
-}
+import java.util.List;
+import java.util.Optional;
 
+public interface ContractRepository extends JpaRepository<ContractEntity, String> {
+    List<ContractEntity> findByOwnerIdOrderByUploadedAtDesc(String ownerId);
+
+    Optional<ContractEntity> findByIdAndOwnerId(String id, String ownerId);
+}

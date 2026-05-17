@@ -27,6 +27,7 @@ public class AnalysisJobRunner {
 
         job.setStatus(AnalysisJobStatus.RUNNING);
         job.setStartedAt(Instant.now());
+        analysisJobRepository.save(job);
 
         try {
             contractAnalysisService.analyze(job.getContractId(), job.getSelectedRuleIds());
@@ -36,7 +37,7 @@ public class AnalysisJobRunner {
             job.setErrorMessage(ex.getMessage());
         } finally {
             job.setCompletedAt(Instant.now());
+            analysisJobRepository.save(job);
         }
     }
 }
-

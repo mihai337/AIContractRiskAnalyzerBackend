@@ -50,11 +50,20 @@ Swagger UI: `/swagger-ui.html`
 - `infrastructure` - persistence, security, seed data, ML adapters and client properties
 - `shared` - reusable exceptions
 
+ML service lives in `/Users/mihai/Desktop/labs/ML` and is consumed via `app.ml.*` properties.
+
 ## Run
 
 ```bash
 cd /Users/mihai/Desktop/labs/AIContractRiskAnalyzerBackend
 ./gradlew bootRun
+```
+
+Run backend dependencies (Postgres + ML service):
+
+```bash
+cd /Users/mihai/Desktop/labs/AIContractRiskAnalyzerBackend
+docker compose up -d
 ```
 
 ## Test
@@ -66,7 +75,7 @@ cd /Users/mihai/Desktop/labs/AIContractRiskAnalyzerBackend
 
 ## Notes
 
-- Text extraction currently decodes `base64Content` as UTF-8 placeholder text.
+- Text extraction is delegated to the ML FastAPI service (`/v1/ml/extract-text`).
 - Rule engine is deterministic and explainable; each alert includes a reason.
 - Default startup seeds 3 example custom rules if no rules exist.
 - `/v1/**` endpoints require `Authorization: Bearer <jwt>`.

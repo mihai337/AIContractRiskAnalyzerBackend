@@ -14,5 +14,3 @@ app:
       issuer: https://securetoken.google.com/local-dev
       audience: local-dev
       hmac-secret: change-me-dev-secret-change-me-dev-secret
-
-

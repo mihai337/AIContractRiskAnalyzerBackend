@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
+import licenta.mihai.aicontractriskanalyzerbackend.AiContractRiskAnalyzerBackendApplication;
+import licenta.mihai.aicontractriskanalyzerbackend.TestSecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup;
 
-@SpringBootTest
+@SpringBootTest(classes = {AiContractRiskAnalyzerBackendApplication.class, TestSecurityConfig.class})
 class ContractsAndRulesIntegrationTest {
 
     @Autowired
@@ -160,5 +162,3 @@ class ContractsAndRulesIntegrationTest {
             .andExpect(status().is4xxClientError());
     }
 }
-
-

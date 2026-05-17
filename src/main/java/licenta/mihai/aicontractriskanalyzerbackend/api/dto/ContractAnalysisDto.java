@@ -8,7 +8,10 @@ public record ContractAnalysisDto(
     RiskScoreDto riskScore,
     List<AiSuggestionDto> aiSuggestions,
     List<RuleAlertDto> ruleAlerts,
-    long generatedAtEpochSeconds
+    long generatedAtEpochSeconds,
+    String contractType,
+    Double contractTypeConfidence,
+    Boolean isContract,
+    String nonContractReason
 ) {
 }
-

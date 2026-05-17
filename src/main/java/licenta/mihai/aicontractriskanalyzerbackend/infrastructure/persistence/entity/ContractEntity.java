@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,7 @@ import lombok.Setter;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.ContractAnalysisResultConverter;
+import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.StringListJsonConverter;
 
 @Entity
 @Table(name = "contracts")
@@ -66,7 +68,14 @@ public class ContractEntity {
     @Column(name = "ml_analyzed_at")
     private Instant mlAnalyzedAt;
 
-    public static ContractEntity pending(String fileName, String sourceUri, String mimeType, String base64Content) {
+    @Column(nullable = false)
+    private String ownerId;
+
+    @Convert(converter = StringListJsonConverter.class)
+    @Column(name = "selected_rule_ids", columnDefinition = "text")
+    private List<String> selectedRuleIds;
+
+    public static ContractEntity pending(String fileName, String sourceUri, String mimeType, String base64Content, String ownerId) {
         ContractEntity entity = new ContractEntity();
         entity.id = UUID.randomUUID().toString();
         entity.fileName = fileName;
@@ -75,8 +84,8 @@ public class ContractEntity {
         entity.base64Content = base64Content;
         entity.uploadedAt = Instant.now();
         entity.status = AnalysisStatus.PENDING;
+        entity.ownerId = ownerId;
+        entity.selectedRuleIds = List.of();
         return entity;
     }
 }
-
-
