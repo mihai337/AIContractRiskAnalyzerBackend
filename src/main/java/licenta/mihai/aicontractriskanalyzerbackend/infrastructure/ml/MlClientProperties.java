@@ -13,9 +13,9 @@ public class MlClientProperties {
     private String baseUrl = "http://localhost:8000";
     private String extractTextPath = "/v1/ml/extract-text";
     private String analyzeTextPath = "/v1/ml/analyze-text";
+    private String embeddingPath = "/v1/ml/embedding";
     private String apiKey;
     private boolean failOpen = true;
     private int connectTimeoutMs = 2000;
     private int readTimeoutMs = 120000;
 }
-

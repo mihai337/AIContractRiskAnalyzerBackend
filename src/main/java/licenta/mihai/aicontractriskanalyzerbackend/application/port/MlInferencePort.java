@@ -14,6 +14,8 @@ public interface MlInferencePort {
         String base64Content
     );
 
+    List<List<Double>> embedTexts(List<String> texts);
+
     record MlInferenceResult(
         List<ContractAnalysisResult.DetectedClause> detectedClauses,
         List<ContractAnalysisResult.AiSuggestion> aiSuggestions,

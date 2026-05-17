@@ -9,6 +9,7 @@ public record ContractAnalysisResult(
     RiskScore riskScore,
     List<AiSuggestion> aiSuggestions,
     List<RuleAlert> ruleAlerts,
+    List<ClauseInsight> clauseInsights,
     Instant generatedAt,
     String contractType,
     Double contractTypeConfidence,
@@ -52,6 +53,26 @@ public record ContractAnalysisResult(
         int overallScore,
         RiskLevel riskLevel,
         List<String> rationale
+    ) {
+    }
+
+    public record ClauseInsight(
+        String clauseId,
+        RiskLevel riskLevel,
+        int riskScore,
+        double confidence,
+        String summary,
+        String recommendation,
+        List<Issue> issues,
+        List<EmbeddingMatch> evidence
+    ) {
+    }
+
+    public record Issue(
+        String issueType,
+        RiskLevel severity,
+        String explanation,
+        String highlightedText
     ) {
     }
 }

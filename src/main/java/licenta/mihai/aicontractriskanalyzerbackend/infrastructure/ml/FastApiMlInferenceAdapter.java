@@ -97,6 +97,32 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         }
     }
 
+    @Override
+    public List<List<Double>> embedTexts(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            return List.of();
+        }
+        try {
+            RestClient restClient = buildClient();
+            EmbeddingResponse response = restClient.post()
+                .uri(properties.getEmbeddingPath())
+                .headers(headers -> applyHeaders(headers, "embedding"))
+                .body(new EmbeddingRequest(texts))
+                .retrieve()
+                .body(EmbeddingResponse.class);
+            if (response == null || response.getEmbeddings() == null) {
+                return List.of();
+            }
+            return response.getEmbeddings();
+        } catch (Exception ex) {
+            log.warn("ML embedding call failed: {}", ex.getMessage());
+            if (!properties.isFailOpen()) {
+                throw new IllegalStateException("ML embedding failed: " + ex.getMessage(), ex);
+            }
+            return List.of();
+        }
+    }
+
     private RestClient buildClient() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofMillis(properties.getConnectTimeoutMs()));
@@ -251,5 +277,14 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         private String extractionEngine;
         private Boolean containsScannedPages;
     }
-}
 
+    private record EmbeddingRequest(
+        List<String> texts
+    ) {
+    }
+
+    @Data
+    private static class EmbeddingResponse {
+        private List<List<Double>> embeddings;
+    }
+}

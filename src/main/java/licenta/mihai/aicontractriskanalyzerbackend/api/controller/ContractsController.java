@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalysisJobDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalyzeContractRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractRecordDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingMatchDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchRequestDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.UploadContractRequestDto;
@@ -15,6 +18,9 @@ import licenta.mihai.aicontractriskanalyzerbackend.application.service.ContractA
 import licenta.mihai.aicontractriskanalyzerbackend.application.service.ContractService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.service.TextExtractionService;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
+import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
+import licenta.mihai.aicontractriskanalyzerbackend.application.service.EmbeddingStoreService;
+import licenta.mihai.aicontractriskanalyzerbackend.domain.model.EmbeddingMatch;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -38,6 +44,8 @@ public class ContractsController {
     private final ContractAnalysisService contractAnalysisService;
     private final TextExtractionService textExtractionService;
     private final ApiMapper apiMapper;
+    private final EmbeddingStoreService embeddingStoreService;
+    private final MlInferencePort mlInferencePort;
 
 
     @PostMapping("/extract-text")
@@ -121,6 +129,29 @@ public class ContractsController {
     ) {
         String ownerId = resolveOwnerId(jwt);
         return apiMapper.toAnalysisJobDto(analysisJobService.getJobOrThrow(contractId, jobId, ownerId));
+    }
+
+    @PostMapping("/retrieval")
+    public EmbeddingSearchResponseDto retrieveSimilarClauses(
+        @AuthenticationPrincipal Jwt jwt,
+        @Valid @RequestBody EmbeddingSearchRequestDto request
+    ) {
+        resolveOwnerId(jwt);
+        List<List<Double>> embeddings = mlInferencePort.embedTexts(List.of(request.text()));
+        if (embeddings.isEmpty()) {
+            return new EmbeddingSearchResponseDto(List.of());
+        }
+        List<EmbeddingMatch> matches = embeddingStoreService.findSimilarClauses(embeddings.get(0), request.limit());
+        List<EmbeddingMatchDto> dtos = matches.stream()
+            .map(match -> new EmbeddingMatchDto(
+                match.clauseId(),
+                match.contractId(),
+                match.clauseType(),
+                match.snippet(),
+                match.distance()
+            ))
+            .toList();
+        return new EmbeddingSearchResponseDto(dtos);
     }
 
     private String resolveOwnerId(Jwt jwt) {

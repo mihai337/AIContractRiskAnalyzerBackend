@@ -7,6 +7,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  flyway:
+    enabled: false
 
 app:
   security:
@@ -14,3 +16,6 @@ app:
       issuer: https://securetoken.google.com/local-dev
       audience: local-dev
       hmac-secret: change-me-dev-secret-change-me-dev-secret
+  llm:
+    enabled: false
+    fail-open: true

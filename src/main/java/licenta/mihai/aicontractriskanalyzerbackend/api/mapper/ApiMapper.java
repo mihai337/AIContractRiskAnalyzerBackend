@@ -12,6 +12,9 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDt
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.MissingClauseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RiskScoreDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RuleAlertDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseInsightDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseIssueDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RetrievalEvidenceDto;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.CustomRule;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ExtractedText;
@@ -50,11 +53,29 @@ public class ApiMapper {
             new RiskScoreDto(riskScore.overallScore(), riskScore.riskLevel(), safeList(riskScore.rationale())),
             safeList(result.aiSuggestions()).stream().map(s -> new AiSuggestionDto(s.id(), s.title(), s.description(), s.priority())).toList(),
             safeList(result.ruleAlerts()).stream().map(r -> new RuleAlertDto(r.ruleId(), r.title(), r.description(), r.severity())).toList(),
+            safeList(result.clauseInsights()).stream().map(this::toClauseInsightDto).toList(),
             result.generatedAt() == null ? java.time.Instant.now().getEpochSecond() : result.generatedAt().getEpochSecond(),
             result.contractType(),
             result.contractTypeConfidence(),
             result.isContract(),
             result.nonContractReason()
+        );
+    }
+
+    private ClauseInsightDto toClauseInsightDto(ContractAnalysisResult.ClauseInsight insight) {
+        return new ClauseInsightDto(
+            insight.clauseId(),
+            insight.riskLevel(),
+            insight.riskScore(),
+            insight.confidence(),
+            insight.summary(),
+            insight.recommendation(),
+            safeList(insight.issues()).stream()
+                .map(issue -> new ClauseIssueDto(issue.issueType(), issue.severity(), issue.explanation(), issue.highlightedText()))
+                .toList(),
+            safeList(insight.evidence()).stream()
+                .map(ev -> new RetrievalEvidenceDto(ev.clauseId(), ev.contractId(), ev.clauseType(), ev.snippet(), ev.distance()))
+                .toList()
         );
     }
 
@@ -141,11 +162,31 @@ public class ApiMapper {
             safeList(dto.ruleAlerts()).stream()
                 .map(r -> new ContractAnalysisResult.RuleAlert(r.ruleId(), r.title(), r.description(), r.severity()))
                 .toList(),
+            safeList(dto.clauseInsights()).stream().map(this::toClauseInsight).toList(),
             java.time.Instant.ofEpochSecond(dto.generatedAtEpochSeconds()),
             dto.contractType(),
             dto.contractTypeConfidence(),
             dto.isContract(),
             dto.nonContractReason()
+        );
+    }
+
+    private ContractAnalysisResult.ClauseInsight toClauseInsight(ClauseInsightDto dto) {
+        return new ContractAnalysisResult.ClauseInsight(
+            dto.clauseId(),
+            dto.riskLevel(),
+            dto.riskScore(),
+            dto.confidence(),
+            dto.summary(),
+            dto.recommendation(),
+            safeList(dto.issues()).stream()
+                .map(issue -> new ContractAnalysisResult.Issue(issue.issueType(), issue.severity(), issue.explanation(), issue.highlightedText()))
+                .toList(),
+            safeList(dto.evidence()).stream()
+                .map(ev -> new licenta.mihai.aicontractriskanalyzerbackend.domain.model.EmbeddingMatch(
+                    ev.clauseId(), ev.contractId(), ev.clauseType(), ev.snippet(), ev.distance()
+                ))
+                .toList()
         );
     }
 

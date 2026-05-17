@@ -31,6 +31,9 @@ spring:
     jdbc:
       initialize-schema: always
 
+  flyway:
+    enabled: true
+
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -43,10 +46,19 @@ app:
     base-url: ${ML_BASE_URL:http://localhost:8000}
     extract-text-path: ${ML_EXTRACT_PATH:/v1/ml/extract-text}
     analyze-text-path: ${ML_ANALYZE_PATH:/v1/ml/analyze-text}
+    embedding-path: ${ML_EMBED_PATH:/v1/ml/embedding}
     api-key: ${ML_API_KEY:}
     fail-open: ${ML_FAIL_OPEN:true}
     connect-timeout-ms: ${ML_CONNECT_TIMEOUT_MS:2000}
     read-timeout-ms: ${ML_READ_TIMEOUT_MS:120000}
+  llm:
+    enabled: ${LLM_ENABLED:true}
+    base-url: ${LLM_BASE_URL:https://api.openai.com/v1}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:gpt-4.1-mini}
+    temperature: ${LLM_TEMPERATURE:0.2}
+    max-output-tokens: ${LLM_MAX_OUTPUT_TOKENS:800}
+    fail-open: ${LLM_FAIL_OPEN:false}
   analysis:
     async:
       core-pool-size: ${ANALYSIS_ASYNC_CORE_POOL_SIZE:2}
