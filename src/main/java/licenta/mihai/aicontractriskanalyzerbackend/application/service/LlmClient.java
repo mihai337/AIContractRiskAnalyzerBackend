@@ -3,6 +3,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,31 @@ public class LlmClient {
 
     private final LlmClientProperties properties;
 
+    private static final String LLM_SCHEMA_NAME = "clause_risk_response";
+    private static final Map<String, Object> LLM_SCHEMA = Map.of(
+        "type", "object",
+        "properties", Map.of(
+            "riskLevel", Map.of("type", "string"),
+            "riskScore", Map.of("type", "integer"),
+            "summary", Map.of("type", "string"),
+            "recommendation", Map.of("type", "string"),
+            "issues", Map.of(
+                "type", "array",
+                "items", Map.of(
+                    "type", "object",
+                    "properties", Map.of(
+                        "issueType", Map.of("type", "string"),
+                        "severity", Map.of("type", "string"),
+                        "explanation", Map.of("type", "string"),
+                        "highlightedText", Map.of("type", "string")
+                    ),
+                    "required", List.of("issueType", "severity", "explanation", "highlightedText")
+                )
+            )
+        ),
+        "required", List.of("riskLevel", "riskScore", "summary", "recommendation", "issues")
+    );
+
     public String completeJson(String prompt) {
         if (!properties.isEnabled()) {
             throw new IllegalStateException("LLM is disabled");
@@ -29,24 +55,27 @@ public class LlmClient {
         }
         try {
             RestClient client = buildClient();
-            LlmResponse response = client.post()
-                .uri("/responses")
+            ChatCompletionResponse response = client.post()
+                .uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON)
                 .headers(headers -> applyHeaders(headers))
-                .body(new LlmRequest(
+                .body(new ChatCompletionRequest(
                     properties.getModel(),
-                    prompt,
+                    List.of(
+                        new ChatRequestMessage("system", "You are a legal contract risk analysis engine."),
+                        new ChatRequestMessage("user", prompt)
+                    ),
                     properties.getTemperature(),
                     properties.getMaxOutputTokens(),
-                    new ResponseFormat("json_object")
+                    ResponseFormat.jsonSchema(LLM_SCHEMA_NAME, LLM_SCHEMA)
                 ))
                 .retrieve()
-                .body(LlmResponse.class);
+                .body(ChatCompletionResponse.class);
 
             if (response == null) {
                 throw new IllegalStateException("LLM response is empty");
             }
-            return response.outputText();
+            return response.firstContent();
         } catch (Exception ex) {
             log.warn("LLM call failed: {}", ex.getMessage());
             throw new IllegalStateException("LLM call failed", ex);
@@ -55,8 +84,8 @@ public class LlmClient {
 
     private RestClient buildClient() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
-        requestFactory.setReadTimeout(Duration.ofSeconds(60));
+        requestFactory.setConnectTimeout(Duration.ofMillis(properties.getConnectTimeoutMs()));
+        requestFactory.setReadTimeout(Duration.ofMillis(properties.getReadTimeoutMs()));
 
         return RestClient.builder()
             .baseUrl(properties.getBaseUrl())
@@ -70,46 +99,66 @@ public class LlmClient {
     }
 
     @Data
-    private static class LlmRequest {
+    private static class ChatCompletionRequest {
         private final String model;
-        private final String input;
+        private final List<ChatRequestMessage> messages;
         private final double temperature;
-        private final int max_output_tokens;
+        private final int max_tokens;
         private final ResponseFormat response_format;
+    }
+
+    @Data
+    private static class ChatRequestMessage {
+        private final String role;
+        private final String content;
     }
 
     @Data
     private static class ResponseFormat {
         private final String type;
+        private final JsonSchema json_schema;
+
+        private static ResponseFormat jsonSchema(String name, Map<String, Object> schema) {
+            return new ResponseFormat("json_schema", new JsonSchema(name, true, schema));
+        }
+    }
+
+    @Data
+    private static class JsonSchema {
+        private final String name;
+        private final boolean strict;
+        private final Map<String, Object> schema;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record LlmResponse(List<LlmOutput> output) {
-        String outputText() {
-            if (output == null) {
+    private record ChatCompletionResponse(List<Choice> choices) {
+        String firstContent() {
+            if (choices == null || choices.isEmpty()) {
                 return "";
             }
-            for (LlmOutput item : output) {
-                if (item == null || item.content == null) {
-                    continue;
-                }
-                for (LlmContent content : item.content) {
-                    if (content != null && content.text != null && !content.text.isBlank()) {
-                        return content.text;
-                    }
-                }
+            Choice choice = choices.get(0);
+            if (choice == null || choice.message == null) {
+                return "";
             }
-            return "";
+            String content = choice.message.content;
+            if (content == null || content.isBlank()) {
+                return choice.message.reasoning_content == null ? "" : choice.message.reasoning_content;
+            }
+            return content;
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LlmOutput {
-        private List<LlmContent> content;
+    @Data
+    private static class Choice {
+        private ChatResponseMessage message;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class LlmContent {
-        private String text;
+    @Data
+    private static class ChatResponseMessage {
+        private String role;
+        private String content;
+        private String reasoning_content;
     }
 }

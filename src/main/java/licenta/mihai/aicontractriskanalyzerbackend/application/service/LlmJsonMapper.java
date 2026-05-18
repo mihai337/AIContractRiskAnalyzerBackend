@@ -15,32 +15,62 @@ public class LlmJsonMapper {
     public LlmAnalysisService.ClauseRiskResult toClauseRiskResult(String clauseId, String json) {
         try {
             LlmClauseResponse response = OBJECT_MAPPER.readValue(json, LlmClauseResponse.class);
-            RiskLevel riskLevel = parseRisk(response.riskLevel);
-            List<LlmAnalysisService.Issue> issues = new ArrayList<>();
-            if (response.issues != null) {
-                for (LlmIssue issue : response.issues) {
-                    issues.add(new LlmAnalysisService.Issue(
-                        issue.issueType == null ? "UNKNOWN" : issue.issueType,
-                        parseRisk(issue.severity),
-                        issue.explanation == null ? "" : issue.explanation,
-                        issue.highlightedText == null ? "" : issue.highlightedText
-                    ));
-                }
-            }
-            double confidence = response.confidence <= 0 ? 0.5 : response.confidence;
-            int riskScore = response.riskScore <= 0 ? 50 : response.riskScore;
-            return new LlmAnalysisService.ClauseRiskResult(
-                clauseId,
-                riskLevel,
-                clampScore(riskScore),
-                Math.max(0.0, Math.min(1.0, confidence)),
-                response.summary == null ? "" : response.summary,
-                response.recommendation == null ? "" : response.recommendation,
-                issues
-            );
+            return toClauseRiskResult(clauseId, response);
         } catch (Exception ex) {
-            throw new IllegalStateException("LLM response could not be parsed", ex);
+            try {
+                String extracted = extractJsonObject(json);
+                LlmClauseResponse response = OBJECT_MAPPER.readValue(extracted, LlmClauseResponse.class);
+                return toClauseRiskResult(clauseId, response);
+            } catch (Exception nested) {
+                throw new IllegalStateException("LLM response could not be parsed", ex);
+            }
         }
+    }
+
+    private LlmAnalysisService.ClauseRiskResult toClauseRiskResult(String clauseId, LlmClauseResponse response) {
+        RiskLevel riskLevel = parseRisk(response.riskLevel);
+        List<LlmAnalysisService.Issue> issues = new ArrayList<>();
+        if (response.issues != null) {
+            for (LlmIssue issue : response.issues) {
+                issues.add(new LlmAnalysisService.Issue(
+                    issue.issueType == null ? "UNKNOWN" : issue.issueType,
+                    parseRisk(issue.severity),
+                    issue.explanation == null ? "" : issue.explanation,
+                    issue.highlightedText == null ? "" : issue.highlightedText
+                ));
+            }
+        }
+        double confidence = response.confidence <= 0 ? 0.5 : response.confidence;
+        int riskScore = response.riskScore <= 0 ? 50 : response.riskScore;
+        return new LlmAnalysisService.ClauseRiskResult(
+            clauseId,
+            riskLevel,
+            clampScore(riskScore),
+            Math.max(0.0, Math.min(1.0, confidence)),
+            response.summary == null ? "" : response.summary,
+            response.recommendation == null ? "" : response.recommendation,
+            issues
+        );
+    }
+
+    private String extractJsonObject(String raw) {
+        if (raw == null) {
+            return "{}";
+        }
+        String trimmed = raw.trim();
+        if (trimmed.startsWith("```")) {
+            int start = trimmed.indexOf('{');
+            int end = trimmed.lastIndexOf('}');
+            if (start >= 0 && end > start) {
+                return trimmed.substring(start, end + 1);
+            }
+        }
+        int start = trimmed.indexOf('{');
+        int end = trimmed.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            return trimmed.substring(start, end + 1);
+        }
+        return trimmed;
     }
 
     private int clampScore(int score) {

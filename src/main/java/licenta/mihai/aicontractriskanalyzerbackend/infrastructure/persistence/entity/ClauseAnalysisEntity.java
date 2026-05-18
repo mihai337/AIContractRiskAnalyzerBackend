@@ -36,13 +36,12 @@ public class ClauseAnalysisEntity {
     @Column(nullable = false)
     private double confidence;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String summary;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String recommendation;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 }
-

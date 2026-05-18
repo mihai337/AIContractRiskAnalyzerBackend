@@ -32,10 +32,9 @@ public class DetectedIssueEntity {
     @Column(nullable = false)
     private RiskLevel severity;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String explanation;
 
-    @Column(name = "highlighted_text", nullable = false)
+    @Column(name = "highlighted_text", nullable = false, columnDefinition = "TEXT")
     private String highlightedText;
 }
-

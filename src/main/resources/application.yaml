@@ -58,6 +58,8 @@ app:
     model: ${LLM_MODEL:gpt-4.1-mini}
     temperature: ${LLM_TEMPERATURE:0.2}
     max-output-tokens: ${LLM_MAX_OUTPUT_TOKENS:800}
+    connect-timeout-ms: ${LLM_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${LLM_READ_TIMEOUT_MS:120000}
     fail-open: ${LLM_FAIL_OPEN:false}
   analysis:
     async:

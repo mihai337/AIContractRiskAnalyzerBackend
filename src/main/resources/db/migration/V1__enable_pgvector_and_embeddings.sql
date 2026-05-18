@@ -10,4 +10,3 @@ CREATE TABLE IF NOT EXISTS clause_embeddings (
 
 CREATE INDEX IF NOT EXISTS clause_embeddings_embedding_idx
     ON clause_embeddings USING ivfflat (embedding vector_cosine_ops);
-

@@ -16,5 +16,6 @@ public class LlmClientProperties {
     private double temperature = 0.2;
     private int maxOutputTokens = 800;
     private boolean failOpen = false;
+    private long connectTimeoutMs = 5000;
+    private long readTimeoutMs = 120000;
 }
-
