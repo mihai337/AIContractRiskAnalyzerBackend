@@ -12,9 +12,11 @@ import org.springframework.util.StreamUtils;
 
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LlmAnalysisService {
 
     private final LlmClient llmClient;
@@ -36,7 +38,19 @@ public class LlmAnalysisService {
             String prompt = buildPrompt(promptTemplate, clause, matches, contractType);
             try {
                 String json = llmClient.completeJson(prompt);
-                results.add(llmJsonMapper.toClauseRiskResult(clause.id(), json));
+                try {
+                    results.add(llmJsonMapper.toClauseRiskResult(clause.id(), json));
+                } catch (RuntimeException ex) {
+                    String snippet = json == null ? "" : json.replaceAll("\n", " ");
+                    if (snippet.length() > 500) {
+                        snippet = snippet.substring(0, 500) + "...";
+                    }
+                    log.warn("LLM JSON parse failed for clause {}: {}", clause.id(), snippet);
+                    if (!llmClientProperties.isFailOpen()) {
+                        throw ex;
+                    }
+                    results.add(buildFallback(clause));
+                }
             } catch (RuntimeException ex) {
                 if (!llmClientProperties.isFailOpen()) {
                     throw ex;

@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import licenta.mihai.aicontractriskanalyzerbackend.api.mapper.ApiMapper;
@@ -14,6 +17,7 @@ import licenta.mihai.aicontractriskanalyzerbackend.application.engine.RuleEngine
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.SuggestionService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
+import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ClauseType;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.CustomRule;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.EmbeddingMatch;
@@ -81,12 +85,17 @@ public class ContractAnalysisService {
             detectedClauses.addAll(mlResult.detectedClauses());
             detectedClauses = deduplicateClauses(detectedClauses);
 
-            clausePersistenceService.storeClauses(entity.getId(), detectedClauses, now);
+            List<CustomRuleEntity> selectedRules = ruleService.resolveRules(selectedRuleIds);
+            List<CustomRule> rules = apiMapper.toCustomRules(selectedRules);
+            Set<ClauseType> allowedClauseTypes = resolveAllowedClauseTypes(rules, selectedRuleIds);
+            List<ContractAnalysisResult.DetectedClause> filteredClauses = filterClausesByAllowedTypes(detectedClauses, allowedClauseTypes);
 
-            List<List<Double>> embeddings = storeClauseEmbeddings(entity.getId(), detectedClauses);
-            List<List<EmbeddingMatch>> retrievalMatches = buildRetrievalMatches(embeddings, detectedClauses.size());
+            clausePersistenceService.storeClauses(entity.getId(), filteredClauses, now);
+
+            List<List<Double>> embeddings = storeClauseEmbeddings(entity.getId(), filteredClauses);
+            List<List<EmbeddingMatch>> retrievalMatches = buildRetrievalMatches(embeddings, filteredClauses.size());
             List<LlmAnalysisService.ClauseRiskResult> llmResults = llmAnalysisService.analyze(
-                detectedClauses,
+                filteredClauses,
                 retrievalMatches,
                 contractType
             );
@@ -94,15 +103,14 @@ public class ContractAnalysisService {
             List<ContractAnalysisResult.ClauseInsight> clauseInsights = buildClauseInsights(llmResults, retrievalMatches);
 
             List<ContractAnalysisResult.MissingClause> missingClauses = missingClauseDetectionService.detect(
-                detectedClauses,
+                filteredClauses,
                 contractType,
                 mlResult.isContract()
             );
-            List<CustomRuleEntity> selectedRules = ruleService.resolveRules(selectedRuleIds);
-            List<CustomRule> rules = apiMapper.toCustomRules(selectedRules);
-            List<ContractAnalysisResult.RuleAlert> alerts = ruleEngineService.evaluate(analysisText, rules, detectedClauses);
+            missingClauses = filterMissingClausesByAllowedTypes(missingClauses, allowedClauseTypes);
+            List<ContractAnalysisResult.RuleAlert> alerts = ruleEngineService.evaluate(analysisText, rules, filteredClauses);
             ContractAnalysisResult.RiskScore aggregated = riskAggregationService.aggregate(
-                detectedClauses,
+                filteredClauses,
                 missingClauses,
                 alerts,
                 llmResults,
@@ -119,7 +127,7 @@ public class ContractAnalysisService {
             suggestions.addAll(mlResult.aiSuggestions());
 
             entity.setAnalysis(new ContractAnalysisResult(
-                detectedClauses,
+                filteredClauses,
                 missingClauses,
                 riskScore,
                 suggestions,
@@ -255,5 +263,39 @@ public class ContractAnalysisService {
             ));
         }
         return insights;
+    }
+
+    private Set<ClauseType> resolveAllowedClauseTypes(List<CustomRule> rules, List<String> selectedRuleIds) {
+        if (selectedRuleIds == null || selectedRuleIds.isEmpty()) {
+            return Set.of();
+        }
+        return rules.stream()
+            .map(CustomRule::requiredClause)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    }
+
+    private List<ContractAnalysisResult.DetectedClause> filterClausesByAllowedTypes(
+        List<ContractAnalysisResult.DetectedClause> clauses,
+        Set<ClauseType> allowedClauseTypes
+    ) {
+        if (allowedClauseTypes == null || allowedClauseTypes.isEmpty()) {
+            return clauses;
+        }
+        return clauses.stream()
+            .filter(clause -> allowedClauseTypes.contains(clause.type()))
+            .toList();
+    }
+
+    private List<ContractAnalysisResult.MissingClause> filterMissingClausesByAllowedTypes(
+        List<ContractAnalysisResult.MissingClause> missingClauses,
+        Set<ClauseType> allowedClauseTypes
+    ) {
+        if (allowedClauseTypes == null || allowedClauseTypes.isEmpty()) {
+            return missingClauses;
+        }
+        return missingClauses.stream()
+            .filter(missing -> allowedClauseTypes.contains(missing.type()))
+            .toList();
     }
 }

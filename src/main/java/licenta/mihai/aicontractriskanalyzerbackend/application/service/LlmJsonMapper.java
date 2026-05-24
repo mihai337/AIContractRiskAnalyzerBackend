@@ -19,12 +19,28 @@ public class LlmJsonMapper {
         } catch (Exception ex) {
             try {
                 String extracted = extractJsonObject(json);
-                LlmClauseResponse response = OBJECT_MAPPER.readValue(extracted, LlmClauseResponse.class);
+                String normalized = normalizeJsonString(extracted);
+                LlmClauseResponse response = OBJECT_MAPPER.readValue(normalized, LlmClauseResponse.class);
                 return toClauseRiskResult(clauseId, response);
             } catch (Exception nested) {
                 throw new IllegalStateException("LLM response could not be parsed", ex);
             }
         }
+    }
+
+    private String normalizeJsonString(String raw) {
+        if (raw == null) {
+            return "{}";
+        }
+        String trimmed = raw.trim();
+        if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+            try {
+                return OBJECT_MAPPER.readValue(trimmed, String.class);
+            } catch (Exception ignored) {
+                return trimmed;
+            }
+        }
+        return trimmed;
     }
 
     private LlmAnalysisService.ClauseRiskResult toClauseRiskResult(String clauseId, LlmClauseResponse response) {
