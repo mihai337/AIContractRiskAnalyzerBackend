@@ -3,6 +3,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.application.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +50,9 @@ public class ContractAnalysisService {
     @Transactional
     public ContractEntity analyze(String contractId, List<String> selectedRuleIds) {
         ContractEntity entity = contractService.getOrThrow(contractId);
+        contractService.markPending(contractId, selectedRuleIds);
+        entity.setStatus(AnalysisStatus.PENDING);
+        entity.setSelectedRuleIds(selectedRuleIds == null ? List.of() : selectedRuleIds);
 
         try {
             MlInferencePort.MlInferenceResult mlResult = mlInferencePort.analyzeContract(
@@ -88,7 +92,18 @@ public class ContractAnalysisService {
             List<CustomRuleEntity> selectedRules = ruleService.resolveRules(selectedRuleIds);
             List<CustomRule> rules = apiMapper.toCustomRules(selectedRules);
             Set<ClauseType> allowedClauseTypes = resolveAllowedClauseTypes(rules, selectedRuleIds);
+            if (selectedRuleIds != null && !selectedRuleIds.isEmpty() && allowedClauseTypes.isEmpty()) {
+                log.warn("Selected rules did not resolve to clause types for contract {}. Rule IDs: {}", contractId, selectedRuleIds);
+            }
             List<ContractAnalysisResult.DetectedClause> filteredClauses = filterClausesByAllowedTypes(detectedClauses, allowedClauseTypes);
+            filteredClauses = collapseDuplicateClauseTypes(filteredClauses);
+            log.info("Clause filtering for contract {}: selectedRuleIds={}, allowedClauseTypes={}, before={}, after={}",
+                contractId,
+                selectedRuleIds,
+                allowedClauseTypes,
+                detectedClauses.size(),
+                filteredClauses.size()
+            );
 
             clausePersistenceService.storeClauses(entity.getId(), filteredClauses, now);
 
@@ -124,7 +139,9 @@ public class ContractAnalysisService {
                 mergedRationale
             );
             List<ContractAnalysisResult.AiSuggestion> suggestions = suggestionService.suggest(missingClauses, alerts);
-            suggestions.addAll(mlResult.aiSuggestions());
+            if (allowedClauseTypes == null || allowedClauseTypes.isEmpty()) {
+                suggestions.addAll(mlResult.aiSuggestions());
+            }
 
             entity.setAnalysis(new ContractAnalysisResult(
                 filteredClauses,
@@ -259,10 +276,27 @@ public class ContractAnalysisService {
                 result.summary(),
                 result.recommendation(),
                 issues,
-                evidence
+                dedupeEvidence(evidence)
             ));
         }
         return insights;
+    }
+
+    private List<EmbeddingMatch> dedupeEvidence(List<EmbeddingMatch> evidence) {
+        if (evidence == null || evidence.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        List<EmbeddingMatch> unique = new ArrayList<>();
+        for (EmbeddingMatch match : evidence) {
+            String snippet = match.snippet() == null ? "" : match.snippet().trim();
+            String clauseType = match.clauseType() == null ? "" : match.clauseType().trim();
+            String key = clauseType + "|" + snippet;
+            if (seen.add(key)) {
+                unique.add(match);
+            }
+        }
+        return unique;
     }
 
     private Set<ClauseType> resolveAllowedClauseTypes(List<CustomRule> rules, List<String> selectedRuleIds) {
@@ -297,5 +331,27 @@ public class ContractAnalysisService {
         return missingClauses.stream()
             .filter(missing -> allowedClauseTypes.contains(missing.type()))
             .toList();
+    }
+
+    private List<ContractAnalysisResult.DetectedClause> collapseDuplicateClauseTypes(
+        List<ContractAnalysisResult.DetectedClause> clauses
+    ) {
+        if (clauses == null || clauses.isEmpty()) {
+            return List.of();
+        }
+        Map<ClauseType, ContractAnalysisResult.DetectedClause> bestByType = new LinkedHashMap<>();
+        for (ContractAnalysisResult.DetectedClause clause : clauses) {
+            ContractAnalysisResult.DetectedClause current = bestByType.get(clause.type());
+            if (current == null || clauseScore(clause) > clauseScore(current)) {
+                bestByType.put(clause.type(), clause);
+            }
+        }
+        return new ArrayList<>(bestByType.values());
+    }
+
+    private int clauseScore(ContractAnalysisResult.DetectedClause clause) {
+        int snippetLength = clause.snippet() == null ? 0 : clause.snippet().trim().length();
+        int confidenceScore = (int) Math.round(clause.confidence() * 1000);
+        return confidenceScore + Math.min(500, snippetLength);
     }
 }

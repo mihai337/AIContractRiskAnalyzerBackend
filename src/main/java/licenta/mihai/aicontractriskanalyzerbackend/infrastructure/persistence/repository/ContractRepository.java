@@ -10,4 +10,6 @@ public interface ContractRepository extends JpaRepository<ContractEntity, String
     List<ContractEntity> findByOwnerIdOrderByUploadedAtDesc(String ownerId);
 
     Optional<ContractEntity> findByIdAndOwnerId(String id, String ownerId);
+
+    long deleteByIdAndOwnerId(String id, String ownerId);
 }

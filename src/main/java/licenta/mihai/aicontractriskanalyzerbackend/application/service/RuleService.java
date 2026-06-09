@@ -37,7 +37,6 @@ public class RuleService {
         if (selectedRuleIds == null || selectedRuleIds.isEmpty()) {
             return customRuleRepository.findAllByEnabledTrue();
         }
-        return customRuleRepository.findAllByIdIn(selectedRuleIds).stream().filter(CustomRuleEntity::isEnabled).toList();
+        return customRuleRepository.findAllByIdIn(selectedRuleIds);
     }
 }
-

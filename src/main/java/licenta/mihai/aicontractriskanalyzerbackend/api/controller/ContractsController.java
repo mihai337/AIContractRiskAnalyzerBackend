@@ -11,6 +11,7 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchReques
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
+import licenta.mihai.aicontractriskanalyzerbackend.api.dto.OkResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.UploadContractRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.mapper.ApiMapper;
 import licenta.mihai.aicontractriskanalyzerbackend.application.service.AnalysisJobService;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
 @RequestMapping("/v1/contracts")
@@ -152,6 +154,16 @@ public class ContractsController {
             ))
             .toList();
         return new EmbeddingSearchResponseDto(dtos);
+    }
+
+    @DeleteMapping("/{contractId}")
+    public OkResponseDto deleteContract(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable String contractId
+    ) {
+        String ownerId = resolveOwnerId(jwt);
+        contractService.delete(contractId, ownerId);
+        return new OkResponseDto(true);
     }
 
     private String resolveOwnerId(Jwt jwt) {

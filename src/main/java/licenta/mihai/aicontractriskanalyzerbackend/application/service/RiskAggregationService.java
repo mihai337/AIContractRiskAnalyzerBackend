@@ -89,11 +89,11 @@ public class RiskAggregationService {
     }
 
     private int clampScore(int score) {
-        return Math.max(0, Math.min(100, score));
+        return Math.clamp(score, 0, 100);
     }
 
     private double clamp01(double value) {
-        return Math.max(0, Math.min(1, value));
+        return Math.clamp(value, 0, 1);
     }
 }
 

@@ -2,6 +2,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -154,6 +155,38 @@ class ContractsAndRulesIntegrationTest {
         if (!("COMPLETED".equals(statusValue) || "FAILED".equals(statusValue))) {
             throw new AssertionError("Async analysis job did not complete in time");
         }
+    }
+
+    @Test
+    void deleteContractRemovesRecord() throws Exception {
+        String sampleText = "Delete contract sample.";
+        String base64 = Base64.getEncoder().encodeToString(sampleText.getBytes(StandardCharsets.UTF_8));
+        String uploadBody = """
+            {
+              "fileName": "delete.txt",
+              "sourceUri": "content://local/delete.txt",
+              "mimeType": "application/pdf",
+              "base64Content": "%s"
+            }
+            """.formatted(base64);
+
+        MvcResult uploadResult = mockMvc.perform(post("/v1/contracts/upload")
+                .header("Authorization", bearerToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(uploadBody))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        String contractId = JsonTestHelper.readString(uploadResult.getResponse().getContentAsString(), "id");
+
+        mockMvc.perform(delete("/v1/contracts/{contractId}", contractId)
+                .header("Authorization", bearerToken))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ok").value(true));
+
+        mockMvc.perform(get("/v1/contracts/{contractId}", contractId)
+                .header("Authorization", bearerToken))
+            .andExpect(status().is4xxClientError());
     }
 
     @Test

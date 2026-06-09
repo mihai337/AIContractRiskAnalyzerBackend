@@ -34,7 +34,7 @@ public class RiskScoringService {
             rationale.add("High-risk detected clauses: " + highRiskClauses);
         }
 
-        score = Math.max(0, Math.min(100, score));
+        score = Math.clamp(score, 0, 100);
         rationale.add("Score computed from deterministic rule-based engine.");
         return new ContractAnalysisResult.RiskScore(score, RiskLevel.fromScore(score), rationale);
     }

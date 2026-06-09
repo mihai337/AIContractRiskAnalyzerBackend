@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DetectedIssueRepository extends JpaRepository<DetectedIssueEntity, String> {
     List<DetectedIssueEntity> findByClauseAnalysisId(String clauseAnalysisId);
-}
 
+    long deleteByClauseAnalysisIdIn(List<String> clauseAnalysisIds);
+}

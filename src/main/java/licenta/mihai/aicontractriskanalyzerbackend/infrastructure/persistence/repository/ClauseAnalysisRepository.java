@@ -6,5 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ClauseAnalysisRepository extends JpaRepository<ClauseAnalysisEntity, String> {
     List<ClauseAnalysisEntity> findByClauseId(String clauseId);
-}
 
+    List<ClauseAnalysisEntity> findByClauseIdIn(List<String> clauseIds);
+
+    long deleteByClauseIdIn(List<String> clauseIds);
+}

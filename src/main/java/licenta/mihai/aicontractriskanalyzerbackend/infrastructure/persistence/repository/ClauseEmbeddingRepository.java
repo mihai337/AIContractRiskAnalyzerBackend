@@ -68,10 +68,16 @@ public class ClauseEmbeddingRepository {
         );
     }
 
+    public int deleteByContractId(String contractId) {
+        return jdbcTemplate.update(
+            "DELETE FROM clause_embeddings WHERE contract_id = ?",
+            contractId
+        );
+    }
+
     private String toVectorLiteral(List<Double> embedding) {
         return embedding.stream()
             .map(value -> String.format("%.6f", value))
             .collect(Collectors.joining(",", "[", "]"));
     }
 }
-

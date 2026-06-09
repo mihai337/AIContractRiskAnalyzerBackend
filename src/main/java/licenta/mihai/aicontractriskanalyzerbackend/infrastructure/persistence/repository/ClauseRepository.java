@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ClauseRepository extends JpaRepository<ClauseEntity, String> {
     List<ClauseEntity> findByContractId(String contractId);
-}
 
+    long deleteByContractId(String contractId);
+}
