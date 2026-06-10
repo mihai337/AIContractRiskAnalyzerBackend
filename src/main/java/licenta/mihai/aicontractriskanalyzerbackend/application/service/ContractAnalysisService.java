@@ -12,11 +12,11 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import licenta.mihai.aicontractriskanalyzerbackend.api.mapper.ApiMapper;
-import licenta.mihai.aicontractriskanalyzerbackend.application.engine.ClauseDetectionService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.MissingClauseDetectionService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.RuleEngineService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.engine.SuggestionService;
 import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
+
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ClauseType;
 import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
@@ -35,7 +35,6 @@ public class ContractAnalysisService {
 
     private final ContractService contractService;
     private final RuleService ruleService;
-    private final ClauseDetectionService clauseDetectionService;
     private final MissingClauseDetectionService missingClauseDetectionService;
     private final RuleEngineService ruleEngineService;
     private final RiskAggregationService riskAggregationService;
@@ -85,8 +84,7 @@ public class ContractAnalysisService {
 
             String analysisText = buildAnalysisText(mlResult);
 
-            List<ContractAnalysisResult.DetectedClause> detectedClauses = new ArrayList<>(clauseDetectionService.detect(analysisText));
-            detectedClauses.addAll(mlResult.detectedClauses());
+            List<ContractAnalysisResult.DetectedClause> detectedClauses = new ArrayList<>(mlResult.detectedClauses());
             detectedClauses = deduplicateClauses(detectedClauses);
 
             List<CustomRuleEntity> selectedRules = ruleService.resolveRules(selectedRuleIds);
