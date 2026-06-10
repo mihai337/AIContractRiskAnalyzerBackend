@@ -9,18 +9,15 @@ import java.util.UUID;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ClauseType;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import licenta.mihai.aicontractriskanalyzerbackend.models.ClauseType;
+import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
+import licenta.mihai.aicontractriskanalyzerbackend.models.RiskLevel;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
-@ConditionalOnProperty(prefix = "app.ml", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @Slf4j
 public class FastApiMlInferenceAdapter implements MlInferencePort {

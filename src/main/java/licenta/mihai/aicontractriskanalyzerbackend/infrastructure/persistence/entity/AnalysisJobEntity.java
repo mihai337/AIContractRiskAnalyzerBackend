@@ -13,8 +13,8 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisJobStatus;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.StringListJsonConverter;
+import licenta.mihai.aicontractriskanalyzerbackend.models.AnalysisJobStatus;
+import licenta.mihai.aicontractriskanalyzerbackend.utils.StringListJsonConverter;
 
 @Entity
 @Table(name = "analysis_jobs")

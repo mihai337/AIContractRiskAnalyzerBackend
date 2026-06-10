@@ -1,6 +1,6 @@
 package licenta.mihai.aicontractriskanalyzerbackend.api.dto;
 
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisJobStatus;
+import licenta.mihai.aicontractriskanalyzerbackend.models.AnalysisJobStatus;
 
 public record AnalysisJobDto(
     String id,

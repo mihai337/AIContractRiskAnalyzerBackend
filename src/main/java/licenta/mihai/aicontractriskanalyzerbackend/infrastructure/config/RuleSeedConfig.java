@@ -1,8 +1,8 @@
 package licenta.mihai.aicontractriskanalyzerbackend.infrastructure.config;
 
 import java.util.List;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ClauseType;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel;
+import licenta.mihai.aicontractriskanalyzerbackend.models.ClauseType;
+import licenta.mihai.aicontractriskanalyzerbackend.models.RiskLevel;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.CustomRuleRepository;
 import org.springframework.boot.CommandLineRunner;

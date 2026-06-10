@@ -1,6 +1,6 @@
 package licenta.mihai.aicontractriskanalyzerbackend.infrastructure.config;
 
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.PolicyService;
+import licenta.mihai.aicontractriskanalyzerbackend.services.PolicyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

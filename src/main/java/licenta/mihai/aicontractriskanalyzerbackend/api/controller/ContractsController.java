@@ -13,15 +13,14 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextRequestDto
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.OkResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.UploadContractRequestDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.mapper.ApiMapper;
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.AnalysisJobService;
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.ContractAnalysisService;
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.ContractService;
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.TextExtractionService;
+import licenta.mihai.aicontractriskanalyzerbackend.utils.ApiMapper;
+import licenta.mihai.aicontractriskanalyzerbackend.services.AnalysisJobService;
+import licenta.mihai.aicontractriskanalyzerbackend.services.ContractAnalysisService;
+import licenta.mihai.aicontractriskanalyzerbackend.services.ContractService;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
-import licenta.mihai.aicontractriskanalyzerbackend.application.port.MlInferencePort;
-import licenta.mihai.aicontractriskanalyzerbackend.application.service.EmbeddingStoreService;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.EmbeddingMatch;
+import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.ml.MlInferencePort;
+import licenta.mihai.aicontractriskanalyzerbackend.services.EmbeddingStoreService;
+import licenta.mihai.aicontractriskanalyzerbackend.models.EmbeddingMatch;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -44,7 +43,6 @@ public class ContractsController {
     private final ContractService contractService;
     private final AnalysisJobService analysisJobService;
     private final ContractAnalysisService contractAnalysisService;
-    private final TextExtractionService textExtractionService;
     private final ApiMapper apiMapper;
     private final EmbeddingStoreService embeddingStoreService;
     private final MlInferencePort mlInferencePort;
@@ -53,7 +51,7 @@ public class ContractsController {
     @PostMapping("/extract-text")
     public ExtractTextResponseDto extractText(@Valid @RequestBody ExtractTextRequestDto request) {
         return apiMapper.toExtractTextResponseDto(
-            textExtractionService.extract(request.fileName(), request.mimeType(), request.base64Content())
+            contractAnalysisService.extractTextFromContract(request.fileName(), request.mimeType(), request.base64Content())
         );
     }
 
@@ -143,7 +141,7 @@ public class ContractsController {
         if (embeddings.isEmpty()) {
             return new EmbeddingSearchResponseDto(List.of());
         }
-        List<EmbeddingMatch> matches = embeddingStoreService.findSimilarClauses(embeddings.get(0), request.limit());
+        List<EmbeddingMatch> matches = embeddingStoreService.findSimilarClauses(embeddings.getFirst(), request.limit());
         List<EmbeddingMatchDto> dtos = matches.stream()
             .map(match -> new EmbeddingMatchDto(
                 match.clauseId(),

@@ -9,12 +9,16 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 public class AsyncConfig {
 
+    private int corePoolSize = 2;
+    private int maxPoolSize = 4;
+    private int queueCapacity = 100;
+
     @Bean(name = "analysisTaskExecutor")
-    public ThreadPoolTaskExecutor analysisTaskExecutor(AnalysisAsyncProperties properties) {
+    public ThreadPoolTaskExecutor analysisTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(properties.getCorePoolSize());
-        executor.setMaxPoolSize(properties.getMaxPoolSize());
-        executor.setQueueCapacity(properties.getQueueCapacity());
+        executor.setCorePoolSize(corePoolSize);
+        executor.setMaxPoolSize(maxPoolSize);
+        executor.setQueueCapacity(queueCapacity);
         executor.setThreadNamePrefix("analysis-job-");
         executor.initialize();
         return executor;

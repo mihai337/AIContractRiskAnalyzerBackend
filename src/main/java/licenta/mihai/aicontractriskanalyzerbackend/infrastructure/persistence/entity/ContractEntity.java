@@ -14,10 +14,10 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ContractAnalysisResult;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.ContractAnalysisResultConverter;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.jpa.StringListJsonConverter;
+import licenta.mihai.aicontractriskanalyzerbackend.models.AnalysisStatus;
+import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
+import licenta.mihai.aicontractriskanalyzerbackend.utils.ContractAnalysisResultConverter;
+import licenta.mihai.aicontractriskanalyzerbackend.utils.StringListJsonConverter;
 
 @Entity
 @Table(name = "contracts")

@@ -2,7 +2,7 @@ package licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.r
 
 import java.util.List;
 import java.util.stream.Collectors;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.EmbeddingMatch;
+import licenta.mihai.aicontractriskanalyzerbackend.models.EmbeddingMatch;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

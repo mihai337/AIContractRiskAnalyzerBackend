@@ -10,7 +10,7 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel;
+import licenta.mihai.aicontractriskanalyzerbackend.models.RiskLevel;
 
 @Entity
 @Table(name = "clause_analysis")

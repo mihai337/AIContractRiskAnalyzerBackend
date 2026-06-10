@@ -1,7 +1,7 @@
 package licenta.mihai.aicontractriskanalyzerbackend.api.dto;
 
 import java.util.List;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.AnalysisStatus;
+import licenta.mihai.aicontractriskanalyzerbackend.models.AnalysisStatus;
 
 public record ContractRecordDto(
     String id,

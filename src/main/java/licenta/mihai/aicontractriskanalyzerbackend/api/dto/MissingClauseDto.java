@@ -1,7 +1,7 @@
 package licenta.mihai.aicontractriskanalyzerbackend.api.dto;
 
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.ClauseType;
-import licenta.mihai.aicontractriskanalyzerbackend.domain.model.RiskLevel;
+import licenta.mihai.aicontractriskanalyzerbackend.models.ClauseType;
+import licenta.mihai.aicontractriskanalyzerbackend.models.RiskLevel;
 
 public record MissingClauseDto(
     ClauseType type,
