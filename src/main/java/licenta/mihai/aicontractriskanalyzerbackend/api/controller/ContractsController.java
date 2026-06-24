@@ -99,17 +99,6 @@ public class ContractsController {
         return apiMapper.toContractRecordDto(saved);
     }
 
-    @PostMapping("/{contractId}/analyze")
-    public ContractRecordDto analyze(
-        @AuthenticationPrincipal Jwt jwt,
-        @PathVariable String contractId,
-        @Valid @RequestBody AnalyzeContractRequestDto request
-    ) {
-        String ownerId = resolveOwnerId(jwt);
-        contractService.getOrThrow(contractId, ownerId);
-        return apiMapper.toContractRecordDto(contractAnalysisService.analyze(contractId, request.selectedRuleIds()));
-    }
-
     @PostMapping("/{contractId}/analysis-jobs")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public AnalysisJobDto createAnalysisJob(
@@ -136,12 +125,12 @@ public class ContractsController {
         @AuthenticationPrincipal Jwt jwt,
         @Valid @RequestBody EmbeddingSearchRequestDto request
     ) {
-        resolveOwnerId(jwt);
+        String ownerId = resolveOwnerId(jwt);
         List<List<Double>> embeddings = mlInferencePort.embedTexts(List.of(request.text()));
         if (embeddings.isEmpty()) {
             return new EmbeddingSearchResponseDto(List.of());
         }
-        List<EmbeddingMatch> matches = embeddingStoreService.findSimilarClauses(embeddings.getFirst(), request.limit());
+        List<EmbeddingMatch> matches = embeddingStoreService.findSimilarClauses(embeddings.getFirst(), ownerId, request.limit());
         List<EmbeddingMatchDto> dtos = matches.stream()
             .map(match -> new EmbeddingMatchDto(
                 match.clauseId(),

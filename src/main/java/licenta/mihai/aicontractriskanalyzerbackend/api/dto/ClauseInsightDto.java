@@ -10,8 +10,7 @@ public record ClauseInsightDto(
     double confidence,
     String summary,
     String recommendation,
-    List<ClauseIssueDto> issues,
-    List<RetrievalEvidenceDto> evidence
+    List<ClauseIssueDto> issues
 ) {
 }
 

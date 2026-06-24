@@ -26,6 +26,7 @@ public class LlmClient {
         "properties", Map.of(
             "riskLevel", Map.of("type", "string"),
             "riskScore", Map.of("type", "integer"),
+            "confidence", Map.of("type", "number"),
             "summary", Map.of("type", "string"),
             "recommendation", Map.of("type", "string"),
             "issues", Map.of(
@@ -42,7 +43,7 @@ public class LlmClient {
                 )
             )
         ),
-        "required", List.of("riskLevel", "riskScore", "summary", "recommendation", "issues")
+        "required", List.of("riskLevel", "riskScore", "confidence", "summary", "recommendation", "issues")
     );
 
     public String completeJson(String prompt) {

@@ -18,4 +18,8 @@ public class LlmClientProperties {
     private boolean failOpen = false;
     private long connectTimeoutMs = 5000;
     private long readTimeoutMs = 120000;
+    /** Maximum number of clauses analysed by the LLM concurrently. */
+    private int maxConcurrency = 4;
+    /** Clauses whose final confidence is below this are flagged for manual review. */
+    private double abstainConfidenceThreshold = 0.4;
 }

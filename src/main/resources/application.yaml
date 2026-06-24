@@ -2,6 +2,12 @@ spring:
   application:
     name: AIContractRiskAnalyzerBackend
 
+  jackson:
+    mapper:
+      # RiskLevel/etc. serialize via toString() (lowercase) but the app sends enum
+      # names (uppercase). Accept either case so the contract-sync round-trip works.
+      accept-case-insensitive-enums: true
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:mydatabase}
     username: ${DB_USERNAME:myuser}
@@ -9,6 +15,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     properties:

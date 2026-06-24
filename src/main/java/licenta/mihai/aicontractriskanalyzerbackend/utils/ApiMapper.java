@@ -14,10 +14,8 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RiskScoreDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RuleAlertDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseInsightDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseIssueDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RetrievalEvidenceDto;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.models.CustomRule;
-import licenta.mihai.aicontractriskanalyzerbackend.models.EmbeddingMatch;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ExtractedText;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
@@ -74,9 +72,6 @@ public class ApiMapper {
             insight.recommendation(),
             safeList(insight.issues()).stream()
                 .map(issue -> new ClauseIssueDto(issue.issueType(), issue.severity(), issue.explanation(), issue.highlightedText()))
-                .toList(),
-            safeList(insight.evidence()).stream()
-                .map(ev -> new RetrievalEvidenceDto(ev.clauseId(), ev.contractId(), ev.clauseType(), ev.snippet(), ev.distance()))
                 .toList()
         );
     }
@@ -183,11 +178,6 @@ public class ApiMapper {
             dto.recommendation(),
             safeList(dto.issues()).stream()
                 .map(issue -> new ContractAnalysisResult.Issue(issue.issueType(), issue.severity(), issue.explanation(), issue.highlightedText()))
-                .toList(),
-            safeList(dto.evidence()).stream()
-                .map(ev -> new EmbeddingMatch(
-                    ev.clauseId(), ev.contractId(), ev.clauseType(), ev.snippet(), ev.distance()
-                ))
                 .toList()
         );
     }

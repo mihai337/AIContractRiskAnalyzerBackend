@@ -63,8 +63,7 @@ public record ContractAnalysisResult(
         double confidence,
         String summary,
         String recommendation,
-        List<Issue> issues,
-        List<EmbeddingMatch> evidence
+        List<Issue> issues
     ) {
     }
 

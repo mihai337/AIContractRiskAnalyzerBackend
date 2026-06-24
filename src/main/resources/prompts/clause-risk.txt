@@ -16,10 +16,15 @@ Clause:
 Retrieved examples:
 {retrieved}
 
+Set "confidence" between 0 and 1 to reflect how certain you are of this assessment.
+Use a low value when the clause is ambiguous, truncated, or outside your expertise.
+For every issue, "highlightedText" MUST be copied verbatim from the clause text above.
+
 Required JSON schema:
 {
   "riskLevel": "",
   "riskScore": 0,
+  "confidence": 0.0,
   "summary": "",
   "recommendation": "",
   "issues": [

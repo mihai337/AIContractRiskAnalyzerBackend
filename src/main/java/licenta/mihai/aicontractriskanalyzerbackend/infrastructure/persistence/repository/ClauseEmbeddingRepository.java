@@ -27,28 +27,35 @@ public class ClauseEmbeddingRepository {
         String contractId,
         String clauseType,
         String snippet,
-        List<Double> embedding
+        List<Double> embedding,
+        String ownerId
     ) {
         String vectorLiteral = toVectorLiteral(embedding);
         jdbcTemplate.update(
             """
-            INSERT INTO clause_embeddings (clause_id, contract_id, clause_type, snippet, embedding)
-            VALUES (?, ?, ?, ?, ?::vector)
+            INSERT INTO clause_embeddings (clause_id, contract_id, clause_type, snippet, embedding, owner_id)
+            VALUES (?, ?, ?, ?, ?::vector, ?)
             ON CONFLICT (clause_id) DO UPDATE
             SET contract_id = EXCLUDED.contract_id,
                 clause_type = EXCLUDED.clause_type,
                 snippet = EXCLUDED.snippet,
-                embedding = EXCLUDED.embedding
+                embedding = EXCLUDED.embedding,
+                owner_id = EXCLUDED.owner_id
             """,
             clauseId,
             contractId,
             clauseType,
             snippet,
-            vectorLiteral
+            vectorLiteral,
+            ownerId
         );
     }
 
-    public List<EmbeddingMatch> findSimilar(List<Double> embedding, int limit) {
+    /**
+     * Returns the nearest clauses visible to {@code ownerId}: the caller's own clauses
+     * plus shared reference clauses (owner_id IS NULL, e.g. seeded from CUAD).
+     */
+    public List<EmbeddingMatch> findSimilar(List<Double> embedding, String ownerId, int limit) {
         String vectorLiteral = toVectorLiteral(embedding);
         return jdbcTemplate.query(
             """
@@ -58,11 +65,13 @@ public class ClauseEmbeddingRepository {
                    snippet,
                    embedding <=> ?::vector AS distance
             FROM clause_embeddings
+            WHERE owner_id = ? OR owner_id IS NULL
             ORDER BY embedding <=> ?::vector
             LIMIT ?
             """,
             MATCH_MAPPER,
             vectorLiteral,
+            ownerId,
             vectorLiteral,
             limit
         );

@@ -14,7 +14,6 @@ import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.ml.MlInference
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,11 +27,10 @@ public class ContractAnalysisService {
     private final MlInferencePort mlInferencePort;
     private final ApiMapper apiMapper;
     private final EmbeddingStoreService embeddingStoreService;
-    private final ClausePersistenceService clausePersistenceService;
     private final LlmAnalysisService llmAnalysisService;
+    private final AnalysisPersistenceService analysisPersistenceService;
 
 
-    @Transactional
     public ContractEntity analyze(String contractId, List<String> selectedRuleIds) {
         ContractEntity entity = contractService.getOrThrow(contractId);
         contractService.markPending(contractId, selectedRuleIds);
@@ -65,6 +63,7 @@ public class ContractAnalysisService {
                     mlResult.nonContractReason()
                 ));
                 applyMlMetadata(entity, mlResult, selectedRuleIds, now);
+                analysisPersistenceService.persistContract(entity);
                 return entity;
             }
 
@@ -89,25 +88,30 @@ public class ContractAnalysisService {
                 filteredClauses.size()
             );
 
-            clausePersistenceService.storeClauses(entity.getId(), filteredClauses, now);
-
-            List<List<Double>> embeddings = storeClauseEmbeddings(entity.getId(), filteredClauses);
-            List<List<EmbeddingMatch>> retrievalMatches = buildRetrievalMatches(embeddings, filteredClauses.size());
+            // Compute embeddings (network) but defer storing them until the final
+            // transaction. Querying retrieval before storing also prevents a clause
+            // from matching itself / its own siblings as "similar" evidence.
+            List<EmbeddingStoreService.ClauseEmbeddingRow> embeddingRows =
+                embedClauses(entity.getId(), entity.getOwnerId(), filteredClauses);
+            List<List<EmbeddingMatch>> retrievalMatches =
+                buildRetrievalMatches(embeddingRows, entity.getOwnerId(), filteredClauses.size());
+            Map<ClauseType, String> rulePolicies = buildRulePolicies(rules);
             List<LlmAnalysisService.ClauseRiskResult> llmResults = llmAnalysisService.analyze(
                 filteredClauses,
                 retrievalMatches,
-                contractType
-            );
-            clausePersistenceService.storeAnalyses(llmResults, now);
-            List<ContractAnalysisResult.ClauseInsight> clauseInsights = buildClauseInsights(llmResults, retrievalMatches);
-
-            List<ContractAnalysisResult.MissingClause> missingClauses = missingClauseDetectionService.detect(
-                filteredClauses,
                 contractType,
-                mlResult.isContract()
+                rulePolicies
             );
-            missingClauses = filterMissingClausesByAllowedTypes(missingClauses, allowedClauseTypes);
-            List<ContractAnalysisResult.RuleAlert> alerts = evaluateRules(analysisText, rules, filteredClauses);
+            List<ContractAnalysisResult.ClauseInsight> clauseInsights = buildClauseInsights(llmResults);
+
+            // Missing clauses are exactly the selected rule clause types that weren't detected.
+            // A selected clause type therefore lands in either the detected clauses or here.
+            Set<ClauseType> detectedTypes = filteredClauses.stream()
+                .map(ContractAnalysisResult.DetectedClause::type)
+                .collect(Collectors.toSet());
+            List<ContractAnalysisResult.MissingClause> missingClauses =
+                missingClauseDetectionService.detect(allowedClauseTypes, detectedTypes);
+            List<ContractAnalysisResult.RuleAlert> alerts = evaluateRules(analysisText, rules);
             ContractAnalysisResult.RiskScore aggregated = riskAggregationService.aggregate(
                 filteredClauses,
                 missingClauses,
@@ -141,6 +145,7 @@ public class ContractAnalysisService {
                 mlResult.nonContractReason()
             ));
             applyMlMetadata(entity, mlResult, selectedRuleIds, now);
+            analysisPersistenceService.persistAnalysis(entity, filteredClauses, embeddingRows, llmResults, now);
             return entity;
         } catch (RuntimeException ex) {
             contractService.markFailed(contractId, ex.getMessage());
@@ -185,21 +190,33 @@ public class ContractAnalysisService {
         return buffer.toString();
     }
 
-    private List<List<EmbeddingMatch>> buildRetrievalMatches(List<List<Double>> embeddings, int expected) {
+    private List<List<EmbeddingMatch>> buildRetrievalMatches(
+        List<EmbeddingStoreService.ClauseEmbeddingRow> rows,
+        String ownerId,
+        int expected
+    ) {
         List<List<EmbeddingMatch>> matches = new ArrayList<>();
-        if (embeddings == null || embeddings.isEmpty()) {
-            for (int i = 0; i < expected; i++) {
-                matches.add(List.of());
+        if (rows != null) {
+            for (EmbeddingStoreService.ClauseEmbeddingRow row : rows) {
+                matches.add(embeddingStoreService.findSimilarClauses(row.embedding(), ownerId, 5));
             }
-            return matches;
         }
-        for (List<Double> embedding : embeddings) {
-            matches.add(embeddingStoreService.findSimilarClauses(embedding, 5));
+        while (matches.size() < expected) {
+            matches.add(List.of());
         }
         return matches;
     }
 
-    private List<List<Double>> storeClauseEmbeddings(String contractId, List<ContractAnalysisResult.DetectedClause> clauses) {
+    /**
+     * Embeds clauses via the ML service (network) without persisting them. The returned
+     * rows are stored later, inside the final transaction. Returns an empty list if the
+     * embedding service is unavailable so analysis can still proceed.
+     */
+    private List<EmbeddingStoreService.ClauseEmbeddingRow> embedClauses(
+        String contractId,
+        String ownerId,
+        List<ContractAnalysisResult.DetectedClause> clauses
+    ) {
         if (clauses == null || clauses.isEmpty()) {
             return List.of();
         }
@@ -213,36 +230,34 @@ public class ContractAnalysisService {
         }
         try {
             List<List<Double>> embeddings = mlInferencePort.embedTexts(texts);
+            List<EmbeddingStoreService.ClauseEmbeddingRow> rows = new ArrayList<>();
             int limit = Math.min(clauses.size(), embeddings.size());
             for (int i = 0; i < limit; i++) {
                 ContractAnalysisResult.DetectedClause clause = clauses.get(i);
-                String snippet = texts.get(i);
-                embeddingStoreService.storeClauseEmbedding(
+                rows.add(new EmbeddingStoreService.ClauseEmbeddingRow(
                     clause.id(),
                     contractId,
                     clause.type().name(),
-                    snippet,
-                    embeddings.get(i)
-                );
+                    texts.get(i),
+                    embeddings.get(i),
+                    ownerId
+                ));
             }
-            return embeddings;
+            return rows;
         } catch (RuntimeException ex) {
-            log.warn("Embedding storage skipped for contract {}: {}", contractId, ex.getMessage());
+            log.warn("Embedding computation skipped for contract {}: {}", contractId, ex.getMessage());
             return List.of();
         }
     }
 
     private List<ContractAnalysisResult.ClauseInsight> buildClauseInsights(
-        List<LlmAnalysisService.ClauseRiskResult> llmResults,
-        List<List<EmbeddingMatch>> retrievalMatches
+        List<LlmAnalysisService.ClauseRiskResult> llmResults
     ) {
         if (llmResults == null || llmResults.isEmpty()) {
             return List.of();
         }
         List<ContractAnalysisResult.ClauseInsight> insights = new ArrayList<>();
-        for (int i = 0; i < llmResults.size(); i++) {
-            LlmAnalysisService.ClauseRiskResult result = llmResults.get(i);
-            List<EmbeddingMatch> evidence = retrievalMatches.size() > i ? retrievalMatches.get(i) : List.of();
+        for (LlmAnalysisService.ClauseRiskResult result : llmResults) {
             List<ContractAnalysisResult.Issue> issues = result.issues().stream()
                 .map(issue -> new ContractAnalysisResult.Issue(
                     issue.issueType(),
@@ -259,28 +274,25 @@ public class ContractAnalysisService {
                 result.confidence(),
                 result.summary(),
                 result.recommendation(),
-                issues,
-                dedupeEvidence(evidence)
+                issues
             ));
         }
         return insights;
     }
 
-    private List<EmbeddingMatch> dedupeEvidence(List<EmbeddingMatch> evidence) {
-        if (evidence == null || evidence.isEmpty()) {
-            return List.of();
-        }
-        LinkedHashSet<String> seen = new LinkedHashSet<>();
-        List<EmbeddingMatch> unique = new ArrayList<>();
-        for (EmbeddingMatch match : evidence) {
-            String snippet = match.snippet() == null ? "" : match.snippet().trim();
-            String clauseType = match.clauseType() == null ? "" : match.clauseType().trim();
-            String key = clauseType + "|" + snippet;
-            if (seen.add(key)) {
-                unique.add(match);
+    /**
+     * Each selected rule's policy text, keyed by the clause type it targets. The LLM uses
+     * this as the standard to judge a clause of that type against (e.g. INTELLECTUAL_PROPERTY
+     * -> "Should contain copyrights for product").
+     */
+    private Map<ClauseType, String> buildRulePolicies(List<CustomRule> rules) {
+        Map<ClauseType, String> policies = new LinkedHashMap<>();
+        for (CustomRule rule : rules) {
+            if (rule.requiredClause() != null && rule.description() != null && !rule.description().isBlank()) {
+                policies.putIfAbsent(rule.requiredClause(), rule.description());
             }
         }
-        return unique;
+        return policies;
     }
 
     private Set<ClauseType> resolveAllowedClauseTypes(List<CustomRule> rules, List<String> selectedRuleIds) {
@@ -302,18 +314,6 @@ public class ContractAnalysisService {
         }
         return clauses.stream()
             .filter(clause -> allowedClauseTypes.contains(clause.type()))
-            .toList();
-    }
-
-    private List<ContractAnalysisResult.MissingClause> filterMissingClausesByAllowedTypes(
-        List<ContractAnalysisResult.MissingClause> missingClauses,
-        Set<ClauseType> allowedClauseTypes
-    ) {
-        if (allowedClauseTypes == null || allowedClauseTypes.isEmpty()) {
-            return missingClauses;
-        }
-        return missingClauses.stream()
-            .filter(missing -> allowedClauseTypes.contains(missing.type()))
             .toList();
     }
 
@@ -341,12 +341,9 @@ public class ContractAnalysisService {
 
     private List<ContractAnalysisResult.RuleAlert> evaluateRules(
             String extractedText,
-            List<CustomRule> rules,
-            List<ContractAnalysisResult.DetectedClause> detectedClauses
+            List<CustomRule> rules
     ) {
         String normalized = extractedText == null ? "" : extractedText.toLowerCase();
-        Set<ClauseType> detectedTypes = detectedClauses.stream().map(ContractAnalysisResult.DetectedClause::type)
-                .collect(java.util.stream.Collectors.toSet());
 
         List<ContractAnalysisResult.RuleAlert> alerts = new ArrayList<>();
         for (CustomRule rule : rules) {
@@ -354,20 +351,13 @@ public class ContractAnalysisService {
                 continue;
             }
 
+            // Clause presence (detected vs missing) is reported separately; rule alerts only
+            // flag a required keyword that is absent from the contract text.
             if (rule.keyword() != null && !rule.keyword().isBlank() && !normalized.contains(rule.keyword().toLowerCase())) {
                 alerts.add(new ContractAnalysisResult.RuleAlert(
                         rule.id(),
                         rule.name(),
                         "Required keyword is missing: " + rule.keyword(),
-                        rule.severity()
-                ));
-            }
-
-            if (rule.requiredClause() != null && !detectedTypes.contains(rule.requiredClause())) {
-                alerts.add(new ContractAnalysisResult.RuleAlert(
-                        rule.id(),
-                        rule.name(),
-                        "Required clause is missing: " + rule.requiredClause(),
                         rule.severity()
                 ));
             }

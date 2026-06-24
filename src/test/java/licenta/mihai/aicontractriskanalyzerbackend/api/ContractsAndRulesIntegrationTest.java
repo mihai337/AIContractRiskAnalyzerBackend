@@ -41,47 +41,6 @@ class ContractsAndRulesIntegrationTest {
     }
 
     @Test
-    void uploadAndAnalyzeContractFlowWorks() throws Exception {
-        String sampleText = "This agreement includes confidentiality, payment, and termination terms. GDPR applies.";
-        String base64 = Base64.getEncoder().encodeToString(sampleText.getBytes(StandardCharsets.UTF_8));
-
-        String uploadBody = """
-            {
-              "fileName": "msa.txt",
-              "sourceUri": "content://local/msa.txt",
-              "mimeType": "application/pdf",
-              "base64Content": "%s"
-            }
-            """.formatted(base64);
-
-        MvcResult uploadResult = mockMvc.perform(post("/v1/contracts/upload")
-                .header("Authorization", bearerToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(uploadBody))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").isNotEmpty())
-            .andExpect(jsonPath("$.status").value("PENDING"))
-            .andReturn();
-
-        String contractId = JsonTestHelper.readString(uploadResult.getResponse().getContentAsString(), "id");
-
-        String analyzeBody = """
-            {
-              "selectedRuleIds": []
-            }
-            """;
-
-        mockMvc.perform(post("/v1/contracts/{contractId}/analyze", contractId)
-                .header("Authorization", bearerToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(analyzeBody))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.status").value("ANALYZED"))
-            .andExpect(jsonPath("$.analysis.riskScore.overallScore").isNumber())
-            .andExpect(jsonPath("$.analysis.detectedClauses").isArray());
-    }
-
-    @Test
     void rulesEndpointsReturnSeededRulesAndAllowToggle() throws Exception {
         MvcResult listResult = mockMvc.perform(get("/v1/rules")
                 .header("Authorization", bearerToken))

@@ -34,7 +34,7 @@ public class ClauseEntity {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String snippet;
 
     @Column(nullable = false)

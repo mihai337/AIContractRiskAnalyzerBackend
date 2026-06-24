@@ -1,6 +1,7 @@
 package licenta.mihai.aicontractriskanalyzerbackend.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
@@ -9,7 +10,11 @@ import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult
 @Converter
 public class ContractAnalysisResultConverter implements AttributeConverter<ContractAnalysisResult, String> {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    // Ignore unknown properties so analysis JSON written by an older schema (e.g. rows that
+    // still contain the removed clauseInsight "evidence" field) keeps deserializing.
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+        .findAndRegisterModules()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Override
     public String convertToDatabaseColumn(ContractAnalysisResult attribute) {

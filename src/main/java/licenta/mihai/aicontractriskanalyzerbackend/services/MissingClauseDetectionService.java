@@ -1,8 +1,6 @@
 package licenta.mihai.aicontractriskanalyzerbackend.services;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ClauseType;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
@@ -12,50 +10,31 @@ import org.springframework.stereotype.Component;
 @Component
 public class MissingClauseDetectionService {
 
-    private static final Map<String, List<ClauseType>> REQUIRED_BY_TYPE = buildRequiredByType();
-
+    /**
+     * A clause type is "missing" when the user selected a rule requiring it (so it's in
+     * {@code requiredTypes}) but it was not detected in the contract. This is the single
+     * source of truth for missing clauses — it mirrors exactly what the user chose to check,
+     * so a selected clause type ends up either in the detected clauses or in this list.
+     */
     public List<ContractAnalysisResult.MissingClause> detect(
-        List<ContractAnalysisResult.DetectedClause> detectedClauses,
-        String contractType,
-        Boolean isContract
+        Set<ClauseType> requiredTypes,
+        Set<ClauseType> detectedTypes
     ) {
-        if (Boolean.FALSE.equals(isContract)) {
+        if (requiredTypes == null || requiredTypes.isEmpty()) {
             return List.of();
         }
-        List<ClauseType> required = REQUIRED_BY_TYPE.getOrDefault(normalizeType(contractType), defaultRequired());
-        Set<ClauseType> detectedTypes = detectedClauses.stream().map(ContractAnalysisResult.DetectedClause::type)
-            .collect(java.util.stream.Collectors.toSet());
-
-        return required.stream()
+        return requiredTypes.stream()
             .filter(type -> !detectedTypes.contains(type))
             .map(type -> new ContractAnalysisResult.MissingClause(
                 type,
-                "Clause was not detected for this contract type.",
+                "No " + readable(type) + " clause was detected in the contract.",
                 severityForMissing(type)
             ))
             .toList();
     }
 
-    private static Map<String, List<ClauseType>> buildRequiredByType() {
-        Map<String, List<ClauseType>> map = new HashMap<>();
-        map.put("NDA", List.of(ClauseType.CONFIDENTIALITY, ClauseType.TERMINATION, ClauseType.LIABILITY, ClauseType.GOVERNING_LAW));
-        map.put("SERVICE_AGREEMENT", List.of(ClauseType.PAYMENT, ClauseType.TERMINATION, ClauseType.LIABILITY, ClauseType.CONFIDENTIALITY, ClauseType.GOVERNING_LAW));
-        map.put("EMPLOYMENT", List.of(ClauseType.PAYMENT, ClauseType.TERMINATION, ClauseType.CONFIDENTIALITY, ClauseType.GOVERNING_LAW));
-        map.put("SALES", List.of(ClauseType.PAYMENT, ClauseType.LIABILITY, ClauseType.TERMINATION, ClauseType.GOVERNING_LAW));
-        map.put("LEASE", List.of(ClauseType.PAYMENT, ClauseType.TERMINATION, ClauseType.LIABILITY, ClauseType.GOVERNING_LAW));
-        map.put("ELECTRICITY_SUPPLY", List.of(ClauseType.PAYMENT, ClauseType.TERMINATION, ClauseType.LIABILITY, ClauseType.GOVERNING_LAW));
-        return map;
-    }
-
-    private static String normalizeType(String contractType) {
-        if (contractType == null) {
-            return "";
-        }
-        return contractType.trim().toUpperCase();
-    }
-
-    private static List<ClauseType> defaultRequired() {
-        return List.of(ClauseType.CONFIDENTIALITY, ClauseType.TERMINATION, ClauseType.LIABILITY, ClauseType.PAYMENT, ClauseType.GOVERNING_LAW);
+    private static String readable(ClauseType type) {
+        return type.name().toLowerCase().replace('_', ' ');
     }
 
     private RiskLevel severityForMissing(ClauseType type) {
