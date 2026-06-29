@@ -32,7 +32,7 @@ spring:
   cloud:
     gcp:
       credentials:
-        location: classpath:aicontractriskanalyser-firebase-adminsdk-fbsvc-3402fe4af4.json
+        location: classpath:aicontractriskanalyser-firebase-adminsdk.json
 
   session:
     jdbc:
