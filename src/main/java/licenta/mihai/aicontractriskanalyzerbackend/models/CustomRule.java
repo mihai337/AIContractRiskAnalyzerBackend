@@ -5,7 +5,6 @@ public record CustomRule(
     String name,
     String description,
     ClauseType requiredClause,
-    String keyword,
     RiskLevel severity,
     boolean enabled
 ) {

@@ -21,7 +21,6 @@ public class RiskAggregationService {
     public ContractAnalysisResult.RiskScore aggregate(
         List<ContractAnalysisResult.DetectedClause> clauses,
         List<ContractAnalysisResult.MissingClause> missingClauses,
-        List<ContractAnalysisResult.RuleAlert> alerts,
         List<LlmAnalysisService.ClauseRiskResult> llmResults,
         List<List<EmbeddingMatch>> retrievalMatches
     ) {
@@ -50,30 +49,24 @@ public class RiskAggregationService {
         }
 
         double avgScore = scoreSum / clauses.size();
-        int penalty = computePenalty(missingClauses, alerts);
+        int penalty = computePenalty(missingClauses);
         int finalScore = Math.clamp((int) Math.round(avgScore + penalty),0,100);
 
         rationale.add("Blend: 0.4 classifier, 0.3 retrieval, 0.3 LLM confidence");
         if (penalty > 0) {
-            rationale.add("Penalty applied from missing clauses and alerts: +" + penalty);
+            rationale.add("Penalty applied from missing clauses: +" + penalty);
         }
 
         return new ContractAnalysisResult.RiskScore(finalScore, RiskLevel.fromScore(finalScore), rationale);
     }
 
     private int computePenalty(
-        List<ContractAnalysisResult.MissingClause> missingClauses,
-        List<ContractAnalysisResult.RuleAlert> alerts
+        List<ContractAnalysisResult.MissingClause> missingClauses
     ) {
         int penalty = 0;
         if (missingClauses != null) {
             for (ContractAnalysisResult.MissingClause missing : missingClauses) {
                 penalty += severityPenalty(missing.severity());
-            }
-        }
-        if (alerts != null) {
-            for (ContractAnalysisResult.RuleAlert alert : alerts) {
-                penalty += severityPenalty(alert.severity());
             }
         }
         return penalty;

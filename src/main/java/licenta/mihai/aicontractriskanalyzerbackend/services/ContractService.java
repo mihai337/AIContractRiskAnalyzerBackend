@@ -6,14 +6,9 @@ import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import licenta.mihai.aicontractriskanalyzerbackend.models.AnalysisStatus;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ClauseAnalysisEntity;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ClauseEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.ClauseAnalysisRepository;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.ClauseEmbeddingRepository;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.ClauseRepository;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.ContractRepository;
-import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.repository.DetectedIssueRepository;
 import licenta.mihai.aicontractriskanalyzerbackend.exceptions.NotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,9 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContractService {
 
     private final ContractRepository contractRepository;
-    private final ClauseRepository clauseRepository;
-    private final ClauseAnalysisRepository clauseAnalysisRepository;
-    private final DetectedIssueRepository detectedIssueRepository;
     private final ClauseEmbeddingRepository clauseEmbeddingRepository;
 
 
@@ -95,9 +87,6 @@ public class ContractService {
         entity.setStatus(AnalysisStatus.FAILED);
         entity.setMlAnalysisSuccess(Boolean.FALSE);
         entity.setMlAnalyzedAt(Instant.now());
-        if (errorMessage != null && !errorMessage.isBlank()) {
-            entity.setMlAnalysisRaw("{\"error\":\"" + errorMessage.replace("\"", "'") + "\"}");
-        }
         contractRepository.save(entity);
     }
 
@@ -115,17 +104,6 @@ public class ContractService {
     @Transactional
     public void delete(String contractId, String ownerId) {
         ContractEntity entity = getOrThrow(contractId, ownerId);
-        List<ClauseEntity> clauses = clauseRepository.findByContractId(entity.getId());
-        List<String> clauseIds = clauses.stream().map(ClauseEntity::getId).toList();
-        if (!clauseIds.isEmpty()) {
-            List<ClauseAnalysisEntity> analyses = clauseAnalysisRepository.findByClauseIdIn(clauseIds);
-            List<String> analysisIds = analyses.stream().map(ClauseAnalysisEntity::getId).toList();
-            if (!analysisIds.isEmpty()) {
-                detectedIssueRepository.deleteByClauseAnalysisIdIn(analysisIds);
-            }
-            clauseAnalysisRepository.deleteByClauseIdIn(clauseIds);
-        }
-        clauseRepository.deleteByContractId(entity.getId());
         try {
             clauseEmbeddingRepository.deleteByContractId(entity.getId());
         } catch (RuntimeException ignored) {

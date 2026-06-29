@@ -2,7 +2,6 @@ package licenta.mihai.aicontractriskanalyzerbackend.utils;
 
 import java.util.Collections;
 import java.util.List;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AiSuggestionDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.AnalysisJobDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseAnalysisDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractAnalysisDto;
@@ -11,7 +10,6 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.CustomRuleDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.MissingClauseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RiskScoreDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RuleAlertDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseInsightDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseIssueDto;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
@@ -51,8 +49,6 @@ public class ApiMapper {
                 .toList(),
             safeList(result.missingClauses()).stream().map(m -> new MissingClauseDto(m.type(), m.reason(), m.severity())).toList(),
             new RiskScoreDto(riskScore.overallScore(), riskScore.riskLevel(), safeList(riskScore.rationale())),
-            safeList(result.aiSuggestions()).stream().map(s -> new AiSuggestionDto(s.id(), s.title(), s.description(), s.priority())).toList(),
-            safeList(result.ruleAlerts()).stream().map(r -> new RuleAlertDto(r.ruleId(), r.title(), r.description(), r.severity())).toList(),
             safeList(result.clauseInsights()).stream().map(this::toClauseInsightDto).toList(),
             result.generatedAt() == null ? java.time.Instant.now().getEpochSecond() : result.generatedAt().getEpochSecond(),
             result.contractType(),
@@ -86,7 +82,6 @@ public class ApiMapper {
             entity.getName(),
             entity.getDescription(),
             entity.getRequiredClause(),
-            entity.getKeyword(),
             entity.getSeverity(),
             entity.isEnabled()
         );
@@ -98,7 +93,6 @@ public class ApiMapper {
         entity.setName(dto.name());
         entity.setDescription(dto.description());
         entity.setRequiredClause(dto.requiredClause());
-        entity.setKeyword(dto.keyword());
         entity.setSeverity(dto.severity());
         entity.setEnabled(dto.enabled());
         return entity;
@@ -110,7 +104,6 @@ public class ApiMapper {
             entity.getName(),
             entity.getDescription(),
             entity.getRequiredClause(),
-            entity.getKeyword(),
             entity.getSeverity(),
             entity.isEnabled()
         );
@@ -153,12 +146,6 @@ public class ApiMapper {
                 riskScore.riskLevel(),
                 safeList(riskScore.rationale())
             ),
-            safeList(dto.aiSuggestions()).stream()
-                .map(s -> new ContractAnalysisResult.AiSuggestion(s.id(), s.title(), s.description(), s.priority()))
-                .toList(),
-            safeList(dto.ruleAlerts()).stream()
-                .map(r -> new ContractAnalysisResult.RuleAlert(r.ruleId(), r.title(), r.description(), r.severity()))
-                .toList(),
             safeList(dto.clauseInsights()).stream().map(this::toClauseInsight).toList(),
             java.time.Instant.ofEpochSecond(dto.generatedAtEpochSeconds()),
             dto.contractType(),

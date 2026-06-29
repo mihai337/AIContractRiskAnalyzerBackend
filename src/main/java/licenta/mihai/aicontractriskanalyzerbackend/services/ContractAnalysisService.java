@@ -54,8 +54,6 @@ public class ContractAnalysisService {
                     List.of(),
                     new ContractAnalysisResult.RiskScore(0, RiskLevel.LOW, List.of("Document does not appear to be a contract.")),
                     List.of(),
-                    List.of(),
-                    List.of(),
                     now,
                     contractType,
                     mlResult.contractTypeConfidence(),
@@ -66,8 +64,6 @@ public class ContractAnalysisService {
                 analysisPersistenceService.persistContract(entity);
                 return entity;
             }
-
-            String analysisText = buildAnalysisText(mlResult);
 
             List<ContractAnalysisResult.DetectedClause> detectedClauses = new ArrayList<>(mlResult.detectedClauses());
             detectedClauses = deduplicateClauses(detectedClauses);
@@ -111,11 +107,9 @@ public class ContractAnalysisService {
                 .collect(Collectors.toSet());
             List<ContractAnalysisResult.MissingClause> missingClauses =
                 missingClauseDetectionService.detect(allowedClauseTypes, detectedTypes);
-            List<ContractAnalysisResult.RuleAlert> alerts = evaluateRules(analysisText, rules);
             ContractAnalysisResult.RiskScore aggregated = riskAggregationService.aggregate(
                 filteredClauses,
                 missingClauses,
-                alerts,
                 llmResults,
                 retrievalMatches
             );
@@ -126,17 +120,10 @@ public class ContractAnalysisService {
                 aggregated.riskLevel(),
                 mergedRationale
             );
-            List<ContractAnalysisResult.AiSuggestion> suggestions = generateSuggestion(missingClauses, alerts);
-            if (allowedClauseTypes == null || allowedClauseTypes.isEmpty()) {
-                suggestions.addAll(mlResult.aiSuggestions());
-            }
-
             entity.setAnalysis(new ContractAnalysisResult(
                 filteredClauses,
                 missingClauses,
                 riskScore,
-                suggestions,
-                alerts,
                 clauseInsights,
                 now,
                 contractType,
@@ -145,7 +132,7 @@ public class ContractAnalysisService {
                 mlResult.nonContractReason()
             ));
             applyMlMetadata(entity, mlResult, selectedRuleIds, now);
-            analysisPersistenceService.persistAnalysis(entity, filteredClauses, embeddingRows, llmResults, now);
+            analysisPersistenceService.persistAnalysis(entity, embeddingRows);
             return entity;
         } catch (RuntimeException ex) {
             contractService.markFailed(contractId, ex.getMessage());
@@ -159,7 +146,6 @@ public class ContractAnalysisService {
         List<String> selectedRuleIds,
         Instant analyzedAt
     ) {
-        entity.setMlAnalysisRaw(mlResult.rawPayload());
         entity.setMlEngine(mlResult.engine());
         entity.setMlAnalysisSuccess(mlResult.success());
         entity.setMlAnalyzedAt(analyzedAt);
@@ -174,20 +160,6 @@ public class ContractAnalysisService {
             deduped.putIfAbsent(key, clause);
         }
         return new ArrayList<>(deduped.values());
-    }
-
-    private String buildAnalysisText(MlInferencePort.MlInferenceResult mlResult) {
-        StringBuilder buffer = new StringBuilder();
-        if (mlResult.extractedText() != null && !mlResult.extractedText().isBlank()) {
-            buffer.append(mlResult.extractedText()).append('\n');
-        }
-        for (String line : mlResult.riskRationale()) {
-            buffer.append(line).append('\n');
-        }
-        for (ContractAnalysisResult.AiSuggestion suggestion : mlResult.aiSuggestions()) {
-            buffer.append(suggestion.description()).append('\n');
-        }
-        return buffer.toString();
     }
 
     private List<List<EmbeddingMatch>> buildRetrievalMatches(
@@ -337,69 +309,6 @@ public class ContractAnalysisService {
         int snippetLength = clause.snippet() == null ? 0 : clause.snippet().trim().length();
         int confidenceScore = (int) Math.round(clause.confidence() * 1000);
         return confidenceScore + Math.min(500, snippetLength);
-    }
-
-    private List<ContractAnalysisResult.RuleAlert> evaluateRules(
-            String extractedText,
-            List<CustomRule> rules
-    ) {
-        String normalized = extractedText == null ? "" : extractedText.toLowerCase();
-
-        List<ContractAnalysisResult.RuleAlert> alerts = new ArrayList<>();
-        for (CustomRule rule : rules) {
-            if (!rule.enabled()) {
-                continue;
-            }
-
-            // Clause presence (detected vs missing) is reported separately; rule alerts only
-            // flag a required keyword that is absent from the contract text.
-            if (rule.keyword() != null && !rule.keyword().isBlank() && !normalized.contains(rule.keyword().toLowerCase())) {
-                alerts.add(new ContractAnalysisResult.RuleAlert(
-                        rule.id(),
-                        rule.name(),
-                        "Required keyword is missing: " + rule.keyword(),
-                        rule.severity()
-                ));
-            }
-        }
-
-        return alerts;
-    }
-
-    private List<ContractAnalysisResult.AiSuggestion> generateSuggestion(
-            List<ContractAnalysisResult.MissingClause> missingClauses,
-            List<ContractAnalysisResult.RuleAlert> alerts
-    ) {
-        List<ContractAnalysisResult.AiSuggestion> suggestions = new ArrayList<>();
-
-        for (ContractAnalysisResult.MissingClause missingClause : missingClauses.stream().limit(5).toList()) {
-            suggestions.add(new ContractAnalysisResult.AiSuggestion(
-                    UUID.randomUUID().toString(),
-                    "Add " + missingClause.type() + " clause",
-                    "Consider adding a well-defined " + missingClause.type().name().toLowerCase().replace('_', ' ') + " clause.",
-                    missingClause.severity()
-            ));
-        }
-
-        for (ContractAnalysisResult.RuleAlert alert : alerts.stream().limit(5).toList()) {
-            suggestions.add(new ContractAnalysisResult.AiSuggestion(
-                    UUID.randomUUID().toString(),
-                    "Resolve rule alert: " + alert.ruleId(),
-                    alert.description(),
-                    alert.severity()
-            ));
-        }
-
-        if (suggestions.isEmpty()) {
-            suggestions.add(new ContractAnalysisResult.AiSuggestion(
-                    UUID.randomUUID().toString(),
-                    "No major issues detected",
-                    "Run a legal review for final validation before signing.",
-                    RiskLevel.LOW
-            ));
-        }
-
-        return suggestions;
     }
 
     public ExtractedText extractTextFromContract(String fileName, String mimeType, String base64Content) {

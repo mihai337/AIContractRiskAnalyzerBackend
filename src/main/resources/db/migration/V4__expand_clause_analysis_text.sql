@@ -1,7 +1,4 @@
-ALTER TABLE clause_analysis
-    ALTER COLUMN summary TYPE TEXT,
-    ALTER COLUMN recommendation TYPE TEXT;
-
-ALTER TABLE detected_issues
-    ALTER COLUMN explanation TYPE TEXT,
-    ALTER COLUMN highlighted_text TYPE TEXT;
+-- Obsolete (no-op). This migration widened summary/recommendation on clause_analysis and
+-- explanation/highlighted_text on detected_issues to TEXT. Both tables were removed in the
+-- schema cleanup (analysis is stored on contracts.analysis_json). Kept as a no-op to preserve
+-- the V4 version number.

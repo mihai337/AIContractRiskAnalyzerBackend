@@ -6,8 +6,6 @@ public record ContractAnalysisDto(
     List<ClauseAnalysisDto> detectedClauses,
     List<MissingClauseDto> missingClauses,
     RiskScoreDto riskScore,
-    List<AiSuggestionDto> aiSuggestions,
-    List<RuleAlertDto> ruleAlerts,
     List<ClauseInsightDto> clauseInsights,
     long generatedAtEpochSeconds,
     String contractType,

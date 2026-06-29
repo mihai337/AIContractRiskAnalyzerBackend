@@ -31,8 +31,6 @@ public class CustomRuleEntity {
     @Enumerated(EnumType.STRING)
     private ClauseType requiredClause;
 
-    private String keyword;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RiskLevel severity;

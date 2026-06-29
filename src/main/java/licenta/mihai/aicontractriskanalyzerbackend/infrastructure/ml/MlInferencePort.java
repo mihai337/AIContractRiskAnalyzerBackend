@@ -18,7 +18,6 @@ public interface MlInferencePort {
 
     record MlInferenceResult(
         List<ContractAnalysisResult.DetectedClause> detectedClauses,
-        List<ContractAnalysisResult.AiSuggestion> aiSuggestions,
         List<String> riskRationale,
         String extractedText,
         String rawPayload,
@@ -31,7 +30,6 @@ public interface MlInferencePort {
     ) {
         public static MlInferenceResult empty() {
             return new MlInferenceResult(
-                List.of(),
                 List.of(),
                 List.of(),
                 "",

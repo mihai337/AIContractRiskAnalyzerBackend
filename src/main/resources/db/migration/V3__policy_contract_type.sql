@@ -1,6 +1,3 @@
-ALTER TABLE policies
-ADD COLUMN IF NOT EXISTS contract_type TEXT;
-
-CREATE INDEX IF NOT EXISTS idx_policies_type_contract
-ON policies (policy_type, contract_type);
-
+-- Obsolete (no-op). This migration added policies.contract_type and an index on it.
+-- The policies table was removed in the schema cleanup (superseded by rule-carried policy
+-- text in custom_rules.description). Kept as a no-op to preserve the V3 version number.

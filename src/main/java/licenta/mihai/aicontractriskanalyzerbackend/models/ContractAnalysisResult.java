@@ -7,8 +7,6 @@ public record ContractAnalysisResult(
     List<DetectedClause> detectedClauses,
     List<MissingClause> missingClauses,
     RiskScore riskScore,
-    List<AiSuggestion> aiSuggestions,
-    List<RuleAlert> ruleAlerts,
     List<ClauseInsight> clauseInsights,
     Instant generatedAt,
     String contractType,
@@ -29,22 +27,6 @@ public record ContractAnalysisResult(
     public record MissingClause(
         ClauseType type,
         String reason,
-        RiskLevel severity
-    ) {
-    }
-
-    public record AiSuggestion(
-        String id,
-        String title,
-        String description,
-        RiskLevel priority
-    ) {
-    }
-
-    public record RuleAlert(
-        String ruleId,
-        String title,
-        String description,
         RiskLevel severity
     ) {
     }

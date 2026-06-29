@@ -55,10 +55,6 @@ public class ContractEntity {
     @Column(name = "analysis_json", columnDefinition = "text")
     private ContractAnalysisResult analysis;
 
-    @Lob
-    @Column(name = "ml_analysis_raw", columnDefinition = "text")
-    private String mlAnalysisRaw;
-
     @Column(name = "ml_engine")
     private String mlEngine;
 

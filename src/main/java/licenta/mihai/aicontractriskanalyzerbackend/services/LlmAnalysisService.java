@@ -32,7 +32,6 @@ public class LlmAnalysisService {
     private final LlmClient llmClient;
     private final LlmJsonMapper llmJsonMapper;
     private final LlmClientProperties llmClientProperties;
-    private final PolicyService policyService;
 
     public List<ClauseRiskResult> analyze(
         List<ContractAnalysisResult.DetectedClause> clauses,
@@ -175,12 +174,9 @@ public class LlmAnalysisService {
         String contractType,
         Map<ClauseType, String> rulePolicies
     ) {
-        // Prefer the policy the user attached to the rule for this clause type; otherwise
-        // fall back to the seeded default policy.
+        // The policy the user attached to the rule for this clause type.
         String rulePolicy = rulePolicies == null ? null : rulePolicies.get(clause.type());
-        String policy = (rulePolicy != null && !rulePolicy.isBlank())
-            ? rulePolicy
-            : policyService.policyForClauseType(clause.type(), contractType);
+        String policy = rulePolicy == null ? "" : rulePolicy;
         String retrieved = matches.stream()
             .limit(3)
             .map(match -> "- " + match.snippet())

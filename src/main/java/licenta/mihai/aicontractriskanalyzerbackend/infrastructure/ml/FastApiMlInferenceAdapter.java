@@ -77,7 +77,6 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
 
             return new MlInferenceResult(
                 toDetectedClauses(response.getDetectedClauses()),
-                toSuggestions(response.getAiSuggestions()),
                 response.getRiskRationale() == null ? List.of() : response.getRiskRationale(),
                 response.getExtractedText() == null ? "" : response.getExtractedText(),
                 toRawPayload(response),
@@ -142,7 +141,7 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         if (!properties.isFailOpen()) {
             throw new IllegalStateException("ML analysis failed: " + reason);
         }
-        return new MlInferenceResult(List.of(), List.of(), List.of("ML unavailable: " + reason), "", null, "fastapi", false, "UNKNOWN", 0.0, Boolean.TRUE, null);
+        return new MlInferenceResult(List.of(), List.of("ML unavailable: " + reason), "", null, "fastapi", false, "UNKNOWN", 0.0, Boolean.TRUE, null);
     }
 
     private String toRawPayload(MlAnalyzeResponse response) {
@@ -166,22 +165,6 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
                 mlClause.getSnippet() == null ? "" : mlClause.getSnippet(),
                 normalizeConfidence(mlClause.getConfidence()),
                 toRiskLevel(mlClause.getRiskLevel())
-            ));
-        }
-        return output;
-    }
-
-    private List<ContractAnalysisResult.AiSuggestion> toSuggestions(List<MlSuggestion> source) {
-        if (source == null || source.isEmpty()) {
-            return List.of();
-        }
-        List<ContractAnalysisResult.AiSuggestion> output = new ArrayList<>();
-        for (MlSuggestion suggestion : source) {
-            output.add(new ContractAnalysisResult.AiSuggestion(
-                UUID.randomUUID().toString(),
-                suggestion.getTitle() == null ? "ML suggestion" : suggestion.getTitle(),
-                suggestion.getDescription() == null ? "" : suggestion.getDescription(),
-                toRiskLevel(suggestion.getPriority())
             ));
         }
         return output;
@@ -230,7 +213,6 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
     @Data
     private static class MlAnalyzeResponse {
         private List<MlClause> detectedClauses;
-        private List<MlSuggestion> aiSuggestions;
         private List<String> riskRationale;
         private String extractedText;
         private Boolean containsScannedPages;
@@ -252,13 +234,6 @@ public class FastApiMlInferenceAdapter implements MlInferencePort {
         private String snippet;
         private Double confidence;
         private String riskLevel;
-    }
-
-    @Data
-    private static class MlSuggestion {
-        private String title;
-        private String description;
-        private String priority;
     }
 
     @Data
