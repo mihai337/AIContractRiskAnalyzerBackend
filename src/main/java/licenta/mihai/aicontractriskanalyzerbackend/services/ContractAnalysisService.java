@@ -179,11 +179,6 @@ public class ContractAnalysisService {
         return matches;
     }
 
-    /**
-     * Embeds clauses via the ML service (network) without persisting them. The returned
-     * rows are stored later, inside the final transaction. Returns an empty list if the
-     * embedding service is unavailable so analysis can still proceed.
-     */
     private List<EmbeddingStoreService.ClauseEmbeddingRow> embedClauses(
         String contractId,
         String ownerId,
