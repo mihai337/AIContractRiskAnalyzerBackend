@@ -105,11 +105,6 @@ public class LlmAnalysisService {
         }
     }
 
-    /**
-     * Drops a hallucinated "highlightedText" quote that does not actually appear in the
-     * source clause. The issue itself is kept (the explanation may still be valid), but the
-     * unverifiable quote is cleared so the UI never shows fabricated evidence.
-     */
     private ClauseRiskResult sanitizeIssues(ContractAnalysisResult.DetectedClause clause, ClauseRiskResult result) {
         if (result.issues().isEmpty()) {
             return result;
@@ -159,14 +154,7 @@ public class LlmAnalysisService {
         );
     }
 
-    /**
-     * Guards against degenerate LLM output. A response with no summary, no recommendation and no
-     * issues (the prompt's "cannot comply → return empty" escape hatch) is otherwise turned into a
-     * confident-looking MEDIUM card by the mapper's defaults. Such a non-answer is demoted to low
-     * confidence so {@link #applyAbstention} surfaces it for manual review instead of showing an
-     * empty, misleading verdict. Partially blank responses get sensible default text so the UI
-     * never renders an empty summary or recommendation.
-     */
+
     private ClauseRiskResult ensureAnswered(ClauseRiskResult result) {
         String summary = result.summary() == null ? "" : result.summary().trim();
         String recommendation = result.recommendation() == null ? "" : result.recommendation().trim();

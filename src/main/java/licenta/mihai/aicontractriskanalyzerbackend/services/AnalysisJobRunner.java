@@ -10,14 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-/**
- * Runs a contract analysis job on the {@code analysisTaskExecutor} thread pool.
- * <p>
- * This lives in its own bean on purpose: the trigger ({@code AnalysisJobService.createJob})
- * invokes it after the create transaction commits. If the {@code @Async} method were on the
- * same bean, that call would be a self-invocation and bypass the Spring proxy — running
- * synchronously in the post-commit phase, where the status updates do not persist.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j

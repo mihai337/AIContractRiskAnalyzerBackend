@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import licenta.mihai.aicontractriskanalyzerbackend.exceptions.BadRequestException;
 import licenta.mihai.aicontractriskanalyzerbackend.models.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -84,9 +83,6 @@ public class ContractAnalysisService {
                 filteredClauses.size()
             );
 
-            // Compute embeddings (network) but defer storing them until the final
-            // transaction. Querying retrieval before storing also prevents a clause
-            // from matching itself / its own siblings as "similar" evidence.
             List<EmbeddingStoreService.ClauseEmbeddingRow> embeddingRows =
                 embedClauses(entity.getId(), entity.getOwnerId(), filteredClauses);
             List<List<EmbeddingMatch>> retrievalMatches =
@@ -100,8 +96,6 @@ public class ContractAnalysisService {
             );
             List<ContractAnalysisResult.ClauseInsight> clauseInsights = buildClauseInsights(llmResults);
 
-            // Missing clauses are exactly the selected rule clause types that weren't detected.
-            // A selected clause type therefore lands in either the detected clauses or here.
             Set<ClauseType> detectedTypes = filteredClauses.stream()
                 .map(ContractAnalysisResult.DetectedClause::type)
                 .collect(Collectors.toSet());
@@ -246,12 +240,7 @@ public class ContractAnalysisService {
         }
         return insights;
     }
-
-    /**
-     * Each selected rule's policy text, keyed by the clause type it targets. The LLM uses
-     * this as the standard to judge a clause of that type against (e.g. INTELLECTUAL_PROPERTY
-     * -> "Should contain copyrights for product").
-     */
+    
     private Map<ClauseType, String> buildRulePolicies(List<CustomRule> rules) {
         Map<ClauseType, String> policies = new LinkedHashMap<>();
         for (CustomRule rule : rules) {
@@ -306,16 +295,4 @@ public class ContractAnalysisService {
         return confidenceScore + Math.min(500, snippetLength);
     }
 
-    public ExtractedText extractTextFromContract(String fileName, String mimeType, String base64Content) {
-        MlInferencePort.MlExtractedTextResult mlResult = mlInferencePort.extractText(
-                "extract-" + System.currentTimeMillis(),
-                fileName,
-                mimeType,
-                base64Content
-        );
-        if (!mlResult.success()) {
-            throw new BadRequestException("Text extraction failed in ML service");
-        }
-        return new ExtractedText(mlResult.text(), mlResult.extractionEngine(), mlResult.containsScannedPages());
-    }
 }

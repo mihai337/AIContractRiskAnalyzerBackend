@@ -7,14 +7,12 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseAnalysisDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractAnalysisDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractRecordDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.CustomRuleDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.MissingClauseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.RiskScoreDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseInsightDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ClauseIssueDto;
 import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult;
 import licenta.mihai.aicontractriskanalyzerbackend.models.CustomRule;
-import licenta.mihai.aicontractriskanalyzerbackend.models.ExtractedText;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.CustomRuleEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.AnalysisJobEntity;
@@ -70,10 +68,6 @@ public class ApiMapper {
                 .map(issue -> new ClauseIssueDto(issue.issueType(), issue.severity(), issue.explanation(), issue.highlightedText()))
                 .toList()
         );
-    }
-
-    public ExtractTextResponseDto toExtractTextResponseDto(ExtractedText extractedText) {
-        return new ExtractTextResponseDto(extractedText.text(), extractedText.extractionEngine(), extractedText.containsScannedPages());
     }
 
     public CustomRuleDto toCustomRuleDto(CustomRuleEntity entity) {

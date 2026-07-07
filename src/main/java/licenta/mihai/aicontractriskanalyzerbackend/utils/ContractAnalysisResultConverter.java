@@ -10,8 +10,6 @@ import licenta.mihai.aicontractriskanalyzerbackend.models.ContractAnalysisResult
 @Converter
 public class ContractAnalysisResultConverter implements AttributeConverter<ContractAnalysisResult, String> {
 
-    // Ignore unknown properties so analysis JSON written by an older schema (e.g. rows that
-    // still contain the removed clauseInsight "evidence" field) keeps deserializing.
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
         .findAndRegisterModules()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
