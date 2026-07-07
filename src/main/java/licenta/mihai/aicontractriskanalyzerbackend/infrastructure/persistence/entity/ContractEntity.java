@@ -50,7 +50,6 @@ public class ContractEntity {
     @Column(nullable = false)
     private AnalysisStatus status;
 
-    @Lob
     @Convert(converter = ContractAnalysisResultConverter.class)
     @Column(name = "analysis_json", columnDefinition = "text")
     private ContractAnalysisResult analysis;

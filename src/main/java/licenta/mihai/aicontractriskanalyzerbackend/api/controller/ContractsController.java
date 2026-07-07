@@ -9,13 +9,10 @@ import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ContractRecordDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingMatchDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.EmbeddingSearchResponseDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextRequestDto;
-import licenta.mihai.aicontractriskanalyzerbackend.api.dto.ExtractTextResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.OkResponseDto;
 import licenta.mihai.aicontractriskanalyzerbackend.api.dto.UploadContractRequestDto;
 import licenta.mihai.aicontractriskanalyzerbackend.utils.ApiMapper;
 import licenta.mihai.aicontractriskanalyzerbackend.services.AnalysisJobService;
-import licenta.mihai.aicontractriskanalyzerbackend.services.ContractAnalysisService;
 import licenta.mihai.aicontractriskanalyzerbackend.services.ContractService;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.persistence.entity.ContractEntity;
 import licenta.mihai.aicontractriskanalyzerbackend.infrastructure.ml.MlInferencePort;
@@ -42,18 +39,9 @@ public class ContractsController {
 
     private final ContractService contractService;
     private final AnalysisJobService analysisJobService;
-    private final ContractAnalysisService contractAnalysisService;
     private final ApiMapper apiMapper;
     private final EmbeddingStoreService embeddingStoreService;
     private final MlInferencePort mlInferencePort;
-
-
-    @PostMapping("/extract-text")
-    public ExtractTextResponseDto extractText(@Valid @RequestBody ExtractTextRequestDto request) {
-        return apiMapper.toExtractTextResponseDto(
-            contractAnalysisService.extractTextFromContract(request.fileName(), request.mimeType(), request.base64Content())
-        );
-    }
 
     @PostMapping("/upload")
     public ContractRecordDto upload(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody UploadContractRequestDto request) {

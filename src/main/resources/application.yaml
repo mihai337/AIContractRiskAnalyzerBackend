@@ -4,8 +4,6 @@ spring:
 
   jackson:
     mapper:
-      # RiskLevel/etc. serialize via toString() (lowercase) but the app sends enum
-      # names (uppercase). Accept either case so the contract-sync round-trip works.
       accept-case-insensitive-enums: true
 
   datasource:
@@ -68,3 +66,5 @@ app:
     connect-timeout-ms: ${LLM_CONNECT_TIMEOUT_MS:5000}
     read-timeout-ms: ${LLM_READ_TIMEOUT_MS:120000}
     fail-open: ${LLM_FAIL_OPEN:false}
+    max-concurrency: ${LLM_MAX_CONCURRENCY:4}
+    abstain-confidence-threshold: ${LLM_ABSTAIN_CONFIDENCE_THRESHOLD:0.4}

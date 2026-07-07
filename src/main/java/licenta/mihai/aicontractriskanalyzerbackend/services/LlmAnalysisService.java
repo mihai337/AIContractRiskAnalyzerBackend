@@ -29,6 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class LlmAnalysisService {
 
+    // Keep per-clause prompts well within a small local-LLM context window.
+    private static final int MAX_CLAUSE_PROMPT_CHARS = 4000;
+    private static final int MAX_RETRIEVED_SNIPPET_CHARS = 400;
+
     private final LlmClient llmClient;
     private final LlmJsonMapper llmJsonMapper;
     private final LlmClientProperties llmClientProperties;
@@ -85,7 +89,7 @@ public class LlmAnalysisService {
             String json = llmClient.completeJson(prompt);
             try {
                 ClauseRiskResult parsed = llmJsonMapper.toClauseRiskResult(clause.id(), json);
-                return applyAbstention(sanitizeIssues(clause, parsed));
+                return applyAbstention(ensureAnswered(sanitizeIssues(clause, parsed)));
             } catch (RuntimeException ex) {
                 log.warn("LLM JSON parse failed for clause {}: {}", clause.id(), truncate(json));
                 if (!llmClientProperties.isFailOpen()) {
@@ -155,6 +159,52 @@ public class LlmAnalysisService {
         );
     }
 
+    /**
+     * Guards against degenerate LLM output. A response with no summary, no recommendation and no
+     * issues (the prompt's "cannot comply → return empty" escape hatch) is otherwise turned into a
+     * confident-looking MEDIUM card by the mapper's defaults. Such a non-answer is demoted to low
+     * confidence so {@link #applyAbstention} surfaces it for manual review instead of showing an
+     * empty, misleading verdict. Partially blank responses get sensible default text so the UI
+     * never renders an empty summary or recommendation.
+     */
+    private ClauseRiskResult ensureAnswered(ClauseRiskResult result) {
+        String summary = result.summary() == null ? "" : result.summary().trim();
+        String recommendation = result.recommendation() == null ? "" : result.recommendation().trim();
+        boolean noIssues = result.issues().isEmpty();
+
+        if (summary.isBlank() && recommendation.isBlank() && noIssues) {
+            return new ClauseRiskResult(
+                result.clauseId(),
+                result.riskLevel(),
+                result.riskScore(),
+                Math.min(result.confidence(), 0.15),
+                "The analyzer did not return an assessment for this clause.",
+                "",
+                result.issues()
+            );
+        }
+
+        if (summary.isBlank()) {
+            summary = noIssues
+                ? "No specific concerns were identified in this clause."
+                : "See the issues listed below.";
+        }
+        if (recommendation.isBlank()) {
+            recommendation = noIssues
+                ? "No specific action identified; review recommended if this clause is important."
+                : "Review and address the issues listed below.";
+        }
+        return new ClauseRiskResult(
+            result.clauseId(),
+            result.riskLevel(),
+            result.riskScore(),
+            result.confidence(),
+            summary,
+            recommendation,
+            result.issues()
+        );
+    }
+
     private static String normalize(String text) {
         return text == null ? "" : text.toLowerCase().replaceAll("\\s+", " ").trim();
     }
@@ -177,16 +227,26 @@ public class LlmAnalysisService {
         // The policy the user attached to the rule for this clause type.
         String rulePolicy = rulePolicies == null ? null : rulePolicies.get(clause.type());
         String policy = rulePolicy == null ? "" : rulePolicy;
+        // Bound the prompt so a single (occasionally huge, under-split) clause plus its
+        // retrieved examples can't exceed the LLM's context window.
+        String clauseText = cap(clause.snippet(), MAX_CLAUSE_PROMPT_CHARS);
         String retrieved = matches.stream()
             .limit(3)
-            .map(match -> "- " + match.snippet())
+            .map(match -> "- " + cap(match.snippet(), MAX_RETRIEVED_SNIPPET_CHARS))
             .reduce("", (a, b) -> a + "\n" + b);
 
         return template
             .replace("{policy}", policy.isBlank() ? "No policy available." : policy)
-            .replace("{clause}", clause.snippet() == null ? "" : clause.snippet())
+            .replace("{clause}", clauseText)
             .replace("{retrieved}", retrieved.isBlank() ? "- none" : retrieved)
             .replace("{contractType}", contractType == null ? "" : contractType);
+    }
+
+    private static String cap(String text, int maxChars) {
+        if (text == null) {
+            return "";
+        }
+        return text.length() > maxChars ? text.substring(0, maxChars) : text;
     }
 
     private String loadPromptTemplate() {

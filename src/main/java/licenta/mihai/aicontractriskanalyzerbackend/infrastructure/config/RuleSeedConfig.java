@@ -19,9 +19,6 @@ public class RuleSeedConfig {
                 return;
             }
 
-            // One rule per clause type. Selecting a rule means "check the contract for this
-            // clause type": if found it's analysed (against the policy text below), if not it's
-            // reported as missing. The "policy" is the standard the LLM judges the clause against.
             repository.saveAll(List.of(
                 rule("rule_confidentiality", "Confidentiality clause", "Confidential information should be protected by clear non-disclosure obligations with a defined duration.", ClauseType.CONFIDENTIALITY, RiskLevel.HIGH),
                 rule("rule_termination", "Termination clause", "The contract should define how and when either party may terminate, including notice periods and consequences.", ClauseType.TERMINATION, RiskLevel.MEDIUM),
